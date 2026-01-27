@@ -4,6 +4,7 @@ export interface IUser extends Document {
     username: string;
     email: string;
     password: string;
+    profilePic?: string;
     refreshToken: string[];
 }
 
@@ -23,7 +24,11 @@ const userSchema = new Schema<IUser>({
     },
     password: {
         type: String,
-        required: true
+        required: false
+    },
+    profilePic: {
+        type: String,
+        default: "" // TODO: Path to the file stored locally on your server
     },
     refreshToken: {
         type: [String],

@@ -140,6 +140,8 @@ router.post("/login", authController.login.bind(authController));
  */
 router.post("/refresh", authController.refresh.bind(authController));
 
+router.post("/google", authController.googleLogin);
+
 /**
  * @swagger
  * /auth/logout:

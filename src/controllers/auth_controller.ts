@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import { OAuth2Client } from "google-auth-library";
 import UserModel from "../models/user_model";
 
 const sendError = (res: Response, message: string, code?: number) => {
@@ -8,186 +10,246 @@ const sendError = (res: Response, message: string, code?: number) => {
     res.status(errCode).json({ error: message });
 }
 
-const getSecret = (): string => {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-        throw new Error("JWT_SECRET environment variable is not defined");
-    }
-    return secret;
-};
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-type Tokens = {
-    token: string;
-    refreshToken: string;
-}
+/**
+ * @swagger
+ * components:
+ * schemas:
+ * AuthResponse:
+ * type: object
+ * properties:
+ * accessToken:
+ * type: string
+ * description: The short-lived JWT access token
+ */
 
-const generateToken = (userId: string): Tokens => {
-    const secret: string = getSecret();
-    const exp: number = parseInt(process.env.JWT_EXPIRES_IN || "3600"); // 1 hour
-    const refreshexp: number = parseInt(process.env.JWT_REFRESH_EXPIRES_IN || "86400"); // 24 hours
-    const token = jwt.sign(
-        { userId: userId, timestamp: Date.now() },
-        secret,
-        { expiresIn: exp }
+const generateTokens = (userId: string) => {
+    const tokenId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString("hex");
+    const accessToken = jwt.sign(
+        { userId }, 
+        process.env.JWT_SECRET as string, 
+        { expiresIn: (process.env.JWT_EXPIRES_IN as any) || '15m' }
     );
     const refreshToken = jwt.sign(
-        { userId: userId, timestamp: Date.now() + 1 },
-        secret,
-        { expiresIn: refreshexp }
+        { userId, tokenId }, 
+        process.env.JWT_REFRESH_SECRET as string, 
+        { expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN as any) || '7d' }
     );
-    return { token, refreshToken };
+    return { accessToken, refreshToken };
 }
 
 class AuthController {
-    // Register a new user
-    async register(req: Request, res: Response): Promise<void> {
-        const { username, email, password } = req.body;
-
-        if (!username || !email || !password) {
-            return sendError(res, "Username, email and password are required", 401);
-        }
-
+    /**
+     * @swagger
+     * /auth/register:
+     * post:
+     * summary: Register a new user
+     * tags: [Auth]
+     * requestBody:
+     * required: true
+     * content:
+     * application/json:
+     * schema:
+     * type: object
+     * properties:
+     * username:
+     * type: string
+     * email:
+     * type: string
+     * password:
+     * type: string
+     * responses:
+     * 201:
+     * description: User registered successfully
+     */
+    async register(req: Request, res: Response) {
         try {
-            // Check if user already exists
-            const existingUser = await UserModel.findOne({ 
-                $or: [{ email }, { username }] 
-            });
-            
-            if (existingUser) {
-                return sendError(res, "User with this email or username already exists", 409);
-            }
+            const { username, email, password } = req.body;
+            if (!username || !email || !password) return sendError(res, "Missing fields", 400);
+
+            const existingUser = await UserModel.findOne({ $or: [{ email }, { username }] });
+            if (existingUser) return sendError(res, "User already exists", 409);
 
             const salt = await bcrypt.genSalt(10);
-            const encryptedPassword = await bcrypt.hash(password, salt);
-            
-            // Create user first without refresh token
-            const user = await UserModel.create({ 
+            const hashedPassword = await bcrypt.hash(password, salt);
+
+            const user = await UserModel.create({
                 username,
-                email, 
-                password: encryptedPassword,
+                email,
+                password: hashedPassword,
                 refreshToken: []
             });
 
-            // Generate JWT tokens with actual user ID
-            const tokens = generateToken(user._id.toString());
+            const { accessToken, refreshToken } = generateTokens(user._id.toString());
+            user.refreshToken.push(refreshToken);
+            await user.save();
 
-            // Update user with refresh token using findByIdAndUpdate to avoid version conflicts
-            await UserModel.findByIdAndUpdate(user._id, {
-                refreshToken: [tokens.refreshToken]
+            // Store refresh token in HttpOnly cookie for persistence
+            res.cookie('refreshToken', refreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
             });
 
-            // Send tokens back to user
-            res.status(201).json(tokens);
+            res.status(201).json({ accessToken });
         } catch (error) {
-            return sendError(res, (error as Error).message || "Registration failed", 400);
+            sendError(res, "Registration failed");
         }
     }
 
-    // Login user
-    async login(req: Request, res: Response): Promise<void> {
-        const { email, password } = req.body;
-
-        if (!email || !password) {
-            return sendError(res, "Email and password are required");
-        }
-
+    /**
+     * @swagger
+     * /auth/login:
+     * post:
+     * summary: Login user
+     * tags: [Auth]
+     */
+    async login(req: Request, res: Response) {
         try {
+            const { email, password } = req.body;
             const user = await UserModel.findOne({ email });
-            if (!user) {
-                return sendError(res, "Invalid email or password");
+            if (!user || !(await bcrypt.compare(password, user.password))) {
+                return sendError(res, "Invalid credentials", 401);
             }
 
-            const isMatch = await bcrypt.compare(password, user.password);
-            if (!isMatch) {
-                return sendError(res, "Invalid email or password");
-            }
-
-            // Generate JWT tokens
-            const tokens = generateToken(user._id.toString());
-
-            user.refreshToken.push(tokens.refreshToken);
+            const { accessToken, refreshToken } = generateTokens(user._id.toString());
+            user.refreshToken.push(refreshToken);
             await user.save();
 
-            // Send tokens back to user
-            res.status(200).json(tokens);
+            res.cookie('refreshToken', refreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 7 * 24 * 60 * 60 * 1000
+            });
+
+            res.status(200).json({ accessToken });
         } catch (error) {
-            return sendError(res, "Login failed");
+            sendError(res, "Login failed");
         }
     }
 
-    // Refresh access token
-    async refresh(req: Request, res: Response): Promise<void> {
-        const { refreshToken } = req.body;
-
-        if (!refreshToken) {
-            return sendError(res, "Refresh token is required", 401);
-        }
+    /**
+     * @swagger
+     * /auth/refresh:
+     * post:
+     * summary: Refresh access token
+     * tags: [Auth]
+     */
+    async refresh(req: Request, res: Response) {
+        const tokenFromCookie = req.cookies.refreshToken;
+        if (!tokenFromCookie) return sendError(res, "No refresh token", 401);
 
         try {
-            const secret: string = getSecret();
-            const decoded: any = jwt.verify(refreshToken, secret);
-
+            const decoded: any = jwt.verify(tokenFromCookie, process.env.JWT_REFRESH_SECRET!);
             const user = await UserModel.findById(decoded.userId);
-            if (!user) {
-                return sendError(res, "Invalid refresh token", 401);
+
+            if (!user || !user.refreshToken.includes(tokenFromCookie)) {
+                if (user) {
+                    user.refreshToken = []; // Security: clear all if reuse suspected 
+                    await user.save();
+                }
+                return sendError(res, "Invalid token", 401);
             }
 
-            if (!user.refreshToken.includes(refreshToken)) {
-                // Remove all refresh tokens from user
-                user.refreshToken = [];
-                await user.save();
-                return sendError(res, "Invalid refresh token", 401);
-            }
-
-            // Generate new tokens
-            const tokens = generateToken(user._id.toString());
+            const { accessToken, refreshToken: newRefreshToken } = generateTokens(user._id.toString());
             
-            // Remove old refresh token
-            user.refreshToken = user.refreshToken.filter(rt => rt !== refreshToken);
-            // Add new refresh token
-            user.refreshToken.push(tokens.refreshToken);
+            // Rotate token 
+            user.refreshToken = user.refreshToken.filter(rt => rt !== tokenFromCookie);
+            user.refreshToken.push(newRefreshToken);
             await user.save();
 
-            res.status(200).json(tokens);
+            res.cookie('refreshToken', newRefreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 7 * 24 * 60 * 60 * 1000
+            });
+
+            res.status(200).json({ accessToken });
         } catch (error) {
-            return sendError(res, "Invalid refresh token", 401);
+            sendError(res, "Session expired", 401);
         }
     }
 
-    // Logout user
-    async logout(req: Request, res: Response): Promise<void> {
-        const { refreshToken } = req.body;
-
-        if (!refreshToken) {
-            return sendError(res, "Refresh token is required", 401);
-        }
-
+    async googleLogin(req: Request, res: Response): Promise<void> {
         try {
-            const secret: string = getSecret();
-            const decoded: any = jwt.verify(refreshToken, secret);
+            const { credential } = req.body;
+            if (!credential) {
+                res.status(400).json({ error: "Missing Google credential" });
+                return;
+            }
 
-            const user = await UserModel.findById(decoded.userId);
+            // 1. validate token 
+            const ticket = await client.verifyIdToken({
+                idToken: credential,
+                audience: process.env.GOOGLE_CLIENT_ID,
+            });
+            const payload = ticket.getPayload();
+            if (!payload || !payload.email) {
+                res.status(400).json({ error: "Invalid Google token" });
+                return;
+            }
+
+            // 2. check if already exists
+            let user = await UserModel.findOne({ email: payload.email });
+
             if (!user) {
-                return sendError(res, "Invalid refresh token", 401);
+                // if not, create new user 
+                user = await UserModel.create({
+                    username: payload.name || payload.email,
+                    email: payload.email,
+                    profilePic: payload.picture, // google's profile photo
+                    refreshToken: []
+                });
             }
 
-            // Check if the refresh token exists in user's tokens
-            if (!user.refreshToken.includes(refreshToken)) {
-                return sendError(res, "Invalid refresh token", 401);
-            }
-
-            // Remove the refresh token from user's tokens (invalidate it)
-            user.refreshToken = user.refreshToken.filter(rt => rt !== refreshToken);
+            // 3. create tokens 
+            const { accessToken, refreshToken } = generateTokens(user._id.toString());
+            user.refreshToken.push(refreshToken);
             await user.save();
 
-            res.status(200).json({ message: "Logged out successfully" });
+            // create refresh tokens
+            res.cookie('refreshToken', refreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 7 * 24 * 60 * 60 * 1000
+            });
+
+            res.status(200).json({ accessToken });
         } catch (error) {
-            // Even if token is expired/invalid, try to remove it if possible
-            if (error instanceof jwt.JsonWebTokenError) {
-                return sendError(res, "Invalid refresh token", 401);
-            }
-            return sendError(res, "Logout failed", 500);
+            console.error(error);
+            res.status(500).json({ error: "Google login failed" });
         }
+    }
+
+    /**
+     * @swagger
+     * /auth/logout:
+     * post:
+     * summary: Logout user
+     * tags: [Auth]
+     */
+    async logout(req: Request, res: Response) {
+        const tokenFromCookie = req.cookies.refreshToken;
+        if (!tokenFromCookie) return res.sendStatus(204);
+
+        try {
+            const decoded: any = jwt.verify(tokenFromCookie, process.env.JWT_REFRESH_SECRET!);
+            const user = await UserModel.findById(decoded.userId);
+            if (user) {
+                user.refreshToken = user.refreshToken.filter(rt => rt !== tokenFromCookie);
+                await user.save();
+            }
+        } catch (error) {
+            // Proceed to clear cookie even if token is expired
+        }
+
+        res.clearCookie('refreshToken');
+        return res.status(200).json({ message: "Logged out" });
     }
 }
 

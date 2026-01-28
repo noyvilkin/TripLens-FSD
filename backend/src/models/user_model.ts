@@ -34,6 +34,6 @@ const userSchema = new Schema<IUser>({
         type: [String],
         default: []
     }
-});
+}, { versionKey: false });
 
 export default mongoose.model<IUser>("Users", userSchema);

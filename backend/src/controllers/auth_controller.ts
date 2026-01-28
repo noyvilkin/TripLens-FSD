@@ -88,8 +88,9 @@ class AuthController {
             // Store refresh token in HttpOnly cookie for persistence
             res.cookie('refreshToken', refreshToken, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
+                secure: false, // localhost doesn't use https
+                sameSite: 'lax',
+                path: '/',
                 maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
             });
 
@@ -109,7 +110,8 @@ class AuthController {
     async login(req: Request, res: Response) {
         try {
             const { email, password } = req.body;
-            const user = await UserModel.findOne({ email });
+            // Find user by email or username
+            const user = await UserModel.findOne({ $or: [{ email }, { username: email }] });
             if (!user || !(await bcrypt.compare(password, user.password))) {
                 return sendError(res, "Invalid credentials", 401);
             }
@@ -120,8 +122,9 @@ class AuthController {
 
             res.cookie('refreshToken', refreshToken, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
+                secure: false, // localhost doesn't use https
+                sameSite: 'lax',
+                path: '/',
                 maxAge: 7 * 24 * 60 * 60 * 1000
             });
 
@@ -148,7 +151,7 @@ class AuthController {
 
             if (!user || !user.refreshToken.includes(tokenFromCookie)) {
                 if (user) {
-                    user.refreshToken = []; // Security: clear all if reuse suspected 
+                    user.refreshToken = [];
                     await user.save();
                 }
                 return sendError(res, "Invalid token", 401);
@@ -156,15 +159,15 @@ class AuthController {
 
             const { accessToken, refreshToken: newRefreshToken } = generateTokens(user._id.toString());
             
-            // Rotate token 
             user.refreshToken = user.refreshToken.filter(rt => rt !== tokenFromCookie);
             user.refreshToken.push(newRefreshToken);
             await user.save();
 
             res.cookie('refreshToken', newRefreshToken, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
+                secure: false,
+                sameSite: 'lax',
+                path: '/',
                 maxAge: 7 * 24 * 60 * 60 * 1000
             });
 
@@ -179,6 +182,12 @@ class AuthController {
             const { credential } = req.body;
             if (!credential) {
                 res.status(400).json({ error: "Missing Google credential" });
+                return;
+            }
+
+            if (!process.env.GOOGLE_CLIENT_ID) {
+                console.error("GOOGLE_CLIENT_ID not configured");
+                res.status(500).json({ error: "Server configuration error" });
                 return;
             }
 
@@ -214,8 +223,9 @@ class AuthController {
             // create refresh tokens
             res.cookie('refreshToken', refreshToken, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
+                secure: false, // localhost doesn't use https
+                sameSite: 'lax',
+                path: '/',
                 maxAge: 7 * 24 * 60 * 60 * 1000
             });
 

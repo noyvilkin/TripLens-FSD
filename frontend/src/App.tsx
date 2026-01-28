@@ -1,35 +1,47 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './hooks/useAuth';
+import AuthPage from './components/AuthPage';
+import ProtectedRoute from './components/ProtectedRoute';
+import LoadingScreen from './components/LoadingScreen';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { accessToken, loading } = useAuth();
+
+  // While the AuthProvider is checking for a session, show a loading screen
+  if (loading) {
+    return <LoadingScreen />;
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <Router>
+      <Routes>
+        {/* 1. The Authentication Routes (Login/Register) */}
+        {/* If user is already logged in, redirect them away from the auth pages */}
+        <Route 
+          path="/login" 
+          element={!accessToken ? <AuthPage isLoginMode={true} /> : <Navigate to="/" />} 
+        />
+
+        <Route 
+          path="/register" 
+          element={!accessToken ? <AuthPage isLoginMode={false} /> : <Navigate to="/" />} 
+        />
+
+        {/* 2. Protected Routes (Only for logged-in users) */}
+        <Route 
+          path="/" 
+          element={
+            <ProtectedRoute>
+              <div>Welcome to the Trip Feed!</div>
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* 3. Fallback: Redirect any unknown path to home */}
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </Router>
+  );
 }
 
-export default App
+export default App;

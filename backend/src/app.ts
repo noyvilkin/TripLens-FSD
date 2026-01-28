@@ -15,7 +15,7 @@ const app: Express = express();
 
 // Middleware
 app.use(cors({ 
-  origin: 'http://localhost:5173', // React URL
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'], // React URLs
   credentials: true                // Allow cookies to be sent
 }));
 app.use(express.json()); // To parse JSON bodies

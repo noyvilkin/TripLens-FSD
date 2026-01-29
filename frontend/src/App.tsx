@@ -3,6 +3,8 @@ import { useAuth } from './hooks/useAuth';
 import AuthPage from './components/AuthPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoadingScreen from './components/LoadingScreen';
+import ProfilePage from './components/ProfilePage';
+import Navigation from './components/Navigation';
 
 function App() {
   const { accessToken, loading } = useAuth();
@@ -14,6 +16,9 @@ function App() {
 
   return (
     <Router>
+      {/* Show navigation only when logged in */}
+      {accessToken && <Navigation />}
+      
       <Routes>
         {/* 1. The Authentication Routes (Login/Register) */}
         {/* If user is already logged in, redirect them away from the auth pages */}
@@ -32,7 +37,20 @@ function App() {
           path="/" 
           element={
             <ProtectedRoute>
-              <div>Welcome to the Trip Feed!</div>
+              <div style={{ padding: '2rem', textAlign: 'center' }}>
+                <h1>Welcome to the Trip Feed!</h1>
+                <p>Navigate to your profile using the navigation bar above.</p>
+              </div>
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* Profile Page Route */}
+        <Route 
+          path="/profile/:userId" 
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
             </ProtectedRoute>
           } 
         />

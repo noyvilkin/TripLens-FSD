@@ -103,12 +103,29 @@ class UserController extends BaseController<IUser> {
                     res.status(400).send("Username can only contain alphanumeric characters and underscores");
                     return;
                 }
+                
+                // Check if username already exists (case insensitive)
+                if (username !== existingUser.username) {
+                    const duplicateUser = await this.model.findOne({ 
+                        username: { $regex: new RegExp(`^${username}$`, 'i') }
+                    });
+                    if (duplicateUser && duplicateUser._id.toString() !== userId) {
+                        res.status(409).send("Username already taken");
+                        return;
+                    }
+                }
+                
                 updateData.username = username;
             }
 
             // Update profilePic if file is provided
             if (file) {
                 updateData.profilePic = `/uploads/profiles/${file.filename}`;
+            }
+            
+            // Handle explicit photo removal (empty string means remove)
+            if (req.body.profileImage === '') {
+                updateData.profilePic = '';
             }
 
             // If no updates provided

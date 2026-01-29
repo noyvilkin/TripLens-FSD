@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import path from "path";
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./swagger";
 import userRoutes from "./routes/user_routes";
@@ -23,6 +24,9 @@ app.use(cors({
 app.use(express.json()); // To parse JSON bodies
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser()); // To read refresh tokens from cookies
+
+// Serve static files (uploaded images)
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 
 // Swagger Documentation

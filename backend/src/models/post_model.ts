@@ -20,6 +20,6 @@ const postSchema = new Schema<IPost>({
         ref: "Users",
         required: true
     }
-});
+}, { timestamps: true });
 
 export default mongoose.model<IPost>("Posts", postSchema);

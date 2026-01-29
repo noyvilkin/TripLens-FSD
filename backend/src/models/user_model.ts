@@ -6,6 +6,8 @@ export interface IUser extends Document {
     password: string;
     profilePic?: string;
     refreshToken: string[];
+    createdAt?: Date;
+    updatedAt?: Date;
 }
 
 const userSchema = new Schema<IUser>({
@@ -13,7 +15,9 @@ const userSchema = new Schema<IUser>({
         type: String,
         required: true,
         unique: true,
-        trim: true
+        trim: true,
+        minlength: 3,
+        maxlength: 30
     },
     email: {
         type: String,
@@ -34,6 +38,6 @@ const userSchema = new Schema<IUser>({
         type: [String],
         default: []
     }
-}, { versionKey: false });
+}, { versionKey: false, timestamps: true });
 
 export default mongoose.model<IUser>("Users", userSchema);

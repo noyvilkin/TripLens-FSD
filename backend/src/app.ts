@@ -7,6 +7,8 @@ import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./swagger";
 import userRoutes from "./routes/user_routes";
 import authRoutes from "./routes/auth_routes";
+import postRoutes from "./routes/post_routes";
+import commentRoutes from "./routes/comment_routes";
 
 
 // Load environment variables
@@ -29,6 +31,8 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // Routes
 app.use("/user", userRoutes);
 app.use("/auth", authRoutes);
+app.use("/post", postRoutes);
+app.use("/comment", commentRoutes);
 
 // Database Connection
 const db = mongoose.connection;

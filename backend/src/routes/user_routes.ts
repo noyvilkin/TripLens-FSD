@@ -1,7 +1,26 @@
-import express, { Router } from "express";
+import express, { Router, Request, Response, NextFunction } from "express";
 import userController from "../controllers/user_controller";
+import authMiddleware from "../middleware/auth_middleware";
+import uploadProfileImage from "../config/multer_config";
+import multer from "multer";
 
 const router: Router = express.Router();
+
+// Multer error handling middleware
+const handleMulterError = (err: any, _req: Request, res: Response, next: NextFunction): void => {
+    if (err instanceof multer.MulterError) {
+        if (err.code === "LIMIT_FILE_SIZE") {
+            res.status(400).send("File too large. Maximum size is 5MB.");
+            return;
+        }
+        res.status(400).send(err.message);
+        return;
+    } else if (err) {
+        res.status(400).send(err.message);
+        return;
+    }
+    next();
+};
 
 /**
  * @swagger
@@ -96,6 +115,44 @@ router.get("/", userController.getAll);
 
 /**
  * @swagger
+ * /user/profile/{userId}:
+ *   get:
+ *     summary: Get user public profile
+ *     description: Retrieves a single user by their unique identifier.
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The user ID
+ *         example: "507f1f77bcf86cd799439011"
+ *     responses:
+ *       200:
+ *         description: User found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UserResponse'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: string
+ *             example: "Not found"
+ *       400:
+ *         description: Invalid ID format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: string
+ */
+router.get("/profile/:userId", userController.getPublicProfile);
+
+/**
+ * @swagger
  * /user/id/{id}:
  *   get:
  *     summary: Get a user by ID
@@ -174,6 +231,119 @@ router.get("/username/:username", userController.getByUsername);
 
 /**
  * @swagger
+ * /user/{userId}:
+ *   put:
+ *     summary: Update user profile (authenticated user only)
+ *     description: |
+ *       Allows the authenticated user to update their own profile.
+ *       
+ *       **Updateable Fields:**
+ *       - username (3-30 characters, alphanumeric and underscore only)
+ *       - profileImage (file upload via multipart/form-data)
+ *       
+ *       **Constraints:**
+ *       - Users can only update their own profile (JWT must match userId)
+ *       - Cannot update email or password via this endpoint
+ *       - Username must be unique
+ *       
+ *       **File Upload:**
+ *       - Accepted formats: JPEG, PNG, WebP
+ *       - Max file size: 5MB
+ *       - Use field name: `profileImage`
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The user ID to update (must match authenticated user)
+ *         example: "507f1f77bcf86cd799439011"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 description: New username (3-30 chars, alphanumeric + underscore)
+ *                 example: "johndoe_updated"
+ *               profileImage:
+ *                 type: string
+ *                 format: binary
+ *                 description: Profile image file (JPEG, PNG, WebP, max 5MB)
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 username:
+ *                   type: string
+ *                 profilePic:
+ *                   type: string
+ *                 updatedAt:
+ *                   type: string
+ *                   format: date-time
+ *             example:
+ *               id: "507f1f77bcf86cd799439011"
+ *               username: "johndoe_updated"
+ *               profilePic: "/uploads/profiles/507f1f77bcf86cd799439011-1738195200000.jpg"
+ *               updatedAt: "2026-01-29T12:45:30.000Z"
+ *       400:
+ *         description: Invalid request data or validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: string
+ *             examples:
+ *               noFields:
+ *                 value: "No valid fields to update"
+ *               invalidUsername:
+ *                 value: "Username must be between 3 and 30 characters"
+ *               invalidChars:
+ *                 value: "Username can only contain alphanumeric characters and underscores"
+ *       401:
+ *         description: Unauthorized - Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: string
+ *             example: "Access denied. No token provided."
+ *       403:
+ *         description: Forbidden - User can only edit their own profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: string
+ *             example: "Unauthorized: You can only edit your own profile"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: string
+ *             example: "User not found"
+ *       409:
+ *         description: Username already taken
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: string
+ *             example: "Username already taken"
+ *     security:
+ *       - bearerAuth: []
+ */
+router.put("/:userId", authMiddleware, uploadProfileImage.single("profileImage"), handleMulterError, userController.updateProfile);
+
+/**
+ * @swagger
  * /user/{id}:
  *   put:
  *     summary: Update a user
@@ -236,7 +406,7 @@ router.get("/username/:username", userController.getByUsername);
  *             schema:
  *               type: string
  */
-router.put("/:id", userController.updateItem);
+router.put("/old/:id", userController.updateItem);
 
 /**
  * @swagger

@@ -88,7 +88,7 @@ class AuthController {
             // Store refresh token in HttpOnly cookie for persistence
             res.cookie('refreshToken', refreshToken, {
                 httpOnly: true,
-                secure: false, // localhost doesn't use https
+                secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax',
                 path: '/',
                 maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
@@ -122,7 +122,7 @@ class AuthController {
 
             res.cookie('refreshToken', refreshToken, {
                 httpOnly: true,
-                secure: false, // localhost doesn't use https
+                secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax',
                 path: '/',
                 maxAge: 7 * 24 * 60 * 60 * 1000
@@ -165,7 +165,7 @@ class AuthController {
 
             res.cookie('refreshToken', newRefreshToken, {
                 httpOnly: true,
-                secure: false,
+                secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax',
                 path: '/',
                 maxAge: 7 * 24 * 60 * 60 * 1000
@@ -223,7 +223,7 @@ class AuthController {
             // create refresh tokens
             res.cookie('refreshToken', refreshToken, {
                 httpOnly: true,
-                secure: false, // localhost doesn't use https
+                secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax',
                 path: '/',
                 maxAge: 7 * 24 * 60 * 60 * 1000

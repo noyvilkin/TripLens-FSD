@@ -17,10 +17,22 @@ dotenv.config();
 const app: Express = express();
 
 // Middleware
-app.use(cors({ 
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'], // React URLs
-  credentials: true                // Allow cookies to be sent
+const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // allow non-browser clients
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+app.options(/.*/, cors());
 app.use(express.json()); // To parse JSON bodies
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser()); // To read refresh tokens from cookies

@@ -34,6 +34,9 @@ const ProfilePage: React.FC = () => {
   useEffect(() => {
     if (!userId || authLoading) return;
 
+    let isMounted = true;
+    const controller = new AbortController();
+
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -41,26 +44,41 @@ const ProfilePage: React.FC = () => {
 
         // Fetch profile and posts in parallel
         const [profileData, postsData] = await Promise.all([
-          getUserProfile(userId),
-          getUserPosts(userId),
+          getUserProfile(userId, controller.signal),
+          getUserPosts(userId, controller.signal),
         ]);
 
+        if (!isMounted) return;
         setProfile(profileData);
         setPosts(postsData);
         setEditUsername(profileData.username);
       } catch (err: unknown) {
+        if (err && typeof err === 'object' && 'code' in err) {
+          const code = (err as { code?: string }).code;
+          if (code === 'ERR_CANCELED') return;
+        }
+
         const errorMessage =
           err && typeof err === 'object' && 'response' in err
             ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
             : 'Failed to load profile';
 
-        setError(errorMessage || 'Failed to load profile');
+        if (isMounted) {
+          setError(errorMessage || 'Failed to load profile');
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchData();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
   }, [userId, authLoading]);
 
   // Handle image selection
@@ -141,7 +159,7 @@ const ProfilePage: React.FC = () => {
         updateData.profileImage = selectedImage;
       }
 
-      const updatedProfile = await updateUserProfile(userId, accessToken, updateData);
+      const updatedProfile = await updateUserProfile(userId, updateData);
       setProfile(updatedProfile);
       setIsEditMode(false);
       setSelectedImage(null);

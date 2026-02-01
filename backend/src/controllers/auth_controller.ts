@@ -110,9 +110,16 @@ class AuthController {
     async login(req: Request, res: Response) {
         try {
             const { email, password } = req.body;
+            if (!email || !password) return sendError(res, "Email and password are required", 400);
+
             // Find user by email or username
             const user = await UserModel.findOne({ $or: [{ email }, { username: email }] });
-            if (!user || !(await bcrypt.compare(password, user.password))) {
+            if (!user || !user.password) {
+                return sendError(res, "Invalid credentials", 401);
+            }
+
+            const isMatch = await bcrypt.compare(password, user.password);
+            if (!isMatch) {
                 return sendError(res, "Invalid credentials", 401);
             }
 

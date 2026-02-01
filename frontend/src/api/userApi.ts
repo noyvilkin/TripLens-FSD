@@ -1,23 +1,23 @@
-import api from './axios';
+import api, { unwrap } from './axios';
 import type { UserProfile, Post } from '../types/user';
 
 // Get user public profile
-export const getUserProfile = async (userId: string): Promise<UserProfile> => {
-  const response = await api.get(`/user/profile/${userId}`);
-  return response.data;
+export const getUserProfile = async (userId: string, signal?: AbortSignal): Promise<UserProfile> => {
+  const response = await api.get<UserProfile>(`/user/profile/${userId}`, { signal });
+  return unwrap(response);
 };
 
 // Get user's posts
-export const getUserPosts = async (userId: string): Promise<Post[]> => {
-  const response = await api.get(`/post?userId=${userId}`);
-  return response.data;
+export const getUserPosts = async (userId: string, signal?: AbortSignal): Promise<Post[]> => {
+  const response = await api.get<Post[]>('/post', { params: { userId }, signal });
+  return unwrap(response);
 };
 
 // Update user profile (with optional image)
 export const updateUserProfile = async (
   userId: string,
-  accessToken: string,
-  data: { username?: string; profileImage?: File | string }
+  data: { username?: string; profileImage?: File | string },
+  signal?: AbortSignal
 ): Promise<UserProfile> => {
   const formData = new FormData();
   
@@ -36,12 +36,12 @@ export const updateUserProfile = async (
     }
   }
 
-  const response = await api.put(`/user/${userId}`, formData, {
+  const response = await api.put<UserProfile>(`/user/${userId}`, formData, {
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'multipart/form-data',
     },
+    signal,
   });
-  
-  return response.data;
+
+  return unwrap(response);
 };

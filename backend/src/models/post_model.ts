@@ -3,7 +3,7 @@ import mongoose, { Schema, Document, Types } from "mongoose";
 export interface IPost extends Document {
     title: string;
     content: string; 
-    image?: string;  
+    images: string[];
     userId: Types.ObjectId;
     vector?: number[]; 
 }
@@ -17,9 +17,13 @@ const postSchema = new Schema<IPost>({
         type: String,
         required: true
     },
-    image: { 
-        type: String, 
-        required: false // Optional, or true if every trip must have a photo
+    images: {
+        type: [String],
+        required: true,
+        validate: {
+            validator: (value: string[]) => Array.isArray(value) && value.length > 0,
+            message: "At least one image is required"
+        }
     },
     userId: {
         type: Schema.Types.ObjectId,

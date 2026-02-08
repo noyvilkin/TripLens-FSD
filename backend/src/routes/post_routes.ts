@@ -1,6 +1,7 @@
 import express, { Router } from "express";
 import postController from "../controllers/post_controller";
 import authMiddleware from "../middleware/auth_middleware";
+import uploadPostImages from "../config/post_multer_config";
 
 const router: Router = express.Router();
 
@@ -50,7 +51,7 @@ const router: Router = express.Router();
  *     security:
  *       - bearerAuth: []
  */
-router.post("/", authMiddleware, postController.post);
+router.post("/", authMiddleware, uploadPostImages.array("images", 6), postController.post);
 
 /**
  * @swagger

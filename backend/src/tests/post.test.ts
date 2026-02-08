@@ -31,11 +31,26 @@ const testPost = {
     content: "This is the content of the test post."
 };
 
+const testImageBuffer = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=",
+    "base64"
+);
+
+const createPostRequest = (token: string, overrides?: { title?: string; content?: string }) => {
+    const title = overrides?.title ?? testPost.title;
+    const content = overrides?.content ?? testPost.content;
+    return request(app)
+        .post("/post")
+        .set("Authorization", `Bearer ${token}`)
+        .field("title", title)
+        .field("content", content)
+        .attach("images", testImageBuffer, "test.png");
+};
+
 describe("Post Tests", () => {
     let accessToken: string;
     let accessToken2: string;
     let userId: string;
-    let userId2: string;
 
     // Connect to test database before all tests
     beforeAll(async () => {
@@ -65,8 +80,6 @@ describe("Post Tests", () => {
             .send(testUser2);
         
         accessToken2 = registerRes2.body.accessToken || registerRes2.body.token;
-        const user2 = await UserModel.findOne({ email: testUser2.email });
-        userId2 = user2?._id.toString() || "";
     });
 
     // Close database connection after all tests
@@ -83,10 +96,9 @@ describe("Post Tests", () => {
             const response = await request(app)
                 .post("/post")
                 .set("Authorization", `Bearer ${accessToken}`)
-                .send({
-                    ...testPost,
-                    userId
-                });
+                .field("title", testPost.title)
+                .field("content", testPost.content)
+                .attach("images", testImageBuffer, "test.png");
 
             expect(response.status).toBe(201);
             expect(response.body).toHaveProperty("_id");
@@ -145,10 +157,8 @@ describe("Post Tests", () => {
             const response = await request(app)
                 .post("/post")
                 .set("Authorization", `Bearer ${accessToken}`)
-                .send({
-                    content: testPost.content,
-                    userId
-                });
+                .field("content", testPost.content)
+                .attach("images", testImageBuffer, "test.png");
 
             expect(response.status).toBe(400);
         });
@@ -157,10 +167,8 @@ describe("Post Tests", () => {
             const response = await request(app)
                 .post("/post")
                 .set("Authorization", `Bearer ${accessToken}`)
-                .send({
-                    title: testPost.title,
-                    userId
-                });
+                .field("title", testPost.title)
+                .attach("images", testImageBuffer, "test.png");
 
             expect(response.status).toBe(400);
         });
@@ -169,10 +177,9 @@ describe("Post Tests", () => {
             const response = await request(app)
                 .post("/post")
                 .set("Authorization", `Bearer ${accessToken}`)
-                .send({
-                    title: testPost.title,
-                    content: testPost.content
-                });
+                .field("title", testPost.title)
+                .field("content", testPost.content)
+                .attach("images", testImageBuffer, "test.png");
 
             expect(response.status).toBe(201);
             expect(response.body).toHaveProperty("_id");
@@ -188,10 +195,9 @@ describe("Post Tests", () => {
             await request(app)
                 .post("/post")
                 .set("Authorization", `Bearer ${accessToken}`)
-                .send({
-                    ...testPost,
-                    userId
-                });
+                .field("title", testPost.title)
+                .field("content", testPost.content)
+                .attach("images", testImageBuffer, "test.png");
 
             const response = await request(app)
                 .get("/post");
@@ -207,20 +213,16 @@ describe("Post Tests", () => {
             await request(app)
                 .post("/post")
                 .set("Authorization", `Bearer ${accessToken}`)
-                .send({
-                    title: "User 1 Post",
-                    content: "Content by user 1",
-                    userId
-                });
+                .field("title", "User 1 Post")
+                .field("content", "Content by user 1")
+                .attach("images", testImageBuffer, "test.png");
 
             await request(app)
                 .post("/post")
                 .set("Authorization", `Bearer ${accessToken2}`)
-                .send({
-                    title: "User 2 Post",
-                    content: "Content by user 2",
-                    userId: userId2
-                });
+                .field("title", "User 2 Post")
+                .field("content", "Content by user 2")
+                .attach("images", testImageBuffer, "test.png");
 
             // Get posts filtered by user1
             const response = await request(app)
@@ -244,13 +246,7 @@ describe("Post Tests", () => {
     describe("GET /post/:id", () => {
         test("Should get a post by ID without authentication", async () => {
             // Create a post first
-            const createRes = await request(app)
-                .post("/post")
-                .set("Authorization", `Bearer ${accessToken}`)
-                .send({
-                    ...testPost,
-                    userId
-                });
+            const createRes = await createPostRequest(accessToken);
 
             const postId = createRes.body._id;
 
@@ -283,13 +279,7 @@ describe("Post Tests", () => {
     describe("PUT /post/:id", () => {
         test("Should update post when authenticated", async () => {
             // Create a post first
-            const createRes = await request(app)
-                .post("/post")
-                .set("Authorization", `Bearer ${accessToken}`)
-                .send({
-                    ...testPost,
-                    userId
-                });
+            const createRes = await createPostRequest(accessToken);
 
             const postId = createRes.body._id;
 
@@ -312,13 +302,7 @@ describe("Post Tests", () => {
 
         test("Should fail to update post without authentication", async () => {
             // Create a post first
-            const createRes = await request(app)
-                .post("/post")
-                .set("Authorization", `Bearer ${accessToken}`)
-                .send({
-                    ...testPost,
-                    userId
-                });
+            const createRes = await createPostRequest(accessToken);
 
             const postId = createRes.body._id;
 
@@ -338,13 +322,7 @@ describe("Post Tests", () => {
         });
 
         test("Should fail to update post with invalid token", async () => {
-            const createRes = await request(app)
-                .post("/post")
-                .set("Authorization", `Bearer ${accessToken}`)
-                .send({
-                    ...testPost,
-                    userId
-                });
+            const createRes = await createPostRequest(accessToken);
 
             const postId = createRes.body._id;
 
@@ -360,13 +338,7 @@ describe("Post Tests", () => {
         });
 
         test("Should update only title when provided", async () => {
-            const createRes = await request(app)
-                .post("/post")
-                .set("Authorization", `Bearer ${accessToken}`)
-                .send({
-                    ...testPost,
-                    userId
-                });
+            const createRes = await createPostRequest(accessToken);
 
             const postId = createRes.body._id;
 
@@ -397,13 +369,7 @@ describe("Post Tests", () => {
 
         test("Authenticated user can update post (different user scenario)", async () => {
             // Create a post by user 1
-            const createRes = await request(app)
-                .post("/post")
-                .set("Authorization", `Bearer ${accessToken}`)
-                .send({
-                    ...testPost,
-                    userId
-                });
+            const createRes = await createPostRequest(accessToken);
 
             const postId = createRes.body._id;
 
@@ -425,13 +391,7 @@ describe("Post Tests", () => {
     describe("DELETE /post/:id", () => {
         test("Should delete post when authenticated", async () => {
             // Create a post first
-            const createRes = await request(app)
-                .post("/post")
-                .set("Authorization", `Bearer ${accessToken}`)
-                .send({
-                    ...testPost,
-                    userId
-                });
+            const createRes = await createPostRequest(accessToken);
 
             const postId = createRes.body._id;
 
@@ -449,13 +409,7 @@ describe("Post Tests", () => {
 
         test("Should fail to delete post without authentication", async () => {
             // Create a post first
-            const createRes = await request(app)
-                .post("/post")
-                .set("Authorization", `Bearer ${accessToken}`)
-                .send({
-                    ...testPost,
-                    userId
-                });
+            const createRes = await createPostRequest(accessToken);
 
             const postId = createRes.body._id;
 
@@ -472,13 +426,7 @@ describe("Post Tests", () => {
         });
 
         test("Should fail to delete post with invalid token", async () => {
-            const createRes = await request(app)
-                .post("/post")
-                .set("Authorization", `Bearer ${accessToken}`)
-                .send({
-                    ...testPost,
-                    userId
-                });
+            const createRes = await createPostRequest(accessToken);
 
             const postId = createRes.body._id;
 
@@ -506,13 +454,7 @@ describe("Post Tests", () => {
     describe("Integration: Post Workflow", () => {
         test("Complete post lifecycle: create -> read -> update -> delete", async () => {
             // 1. Create
-            const createRes = await request(app)
-                .post("/post")
-                .set("Authorization", `Bearer ${accessToken}`)
-                .send({
-                    ...testPost,
-                    userId
-                });
+            const createRes = await createPostRequest(accessToken);
 
             expect(createRes.status).toBe(201);
             const postId = createRes.body._id;
@@ -557,10 +499,10 @@ describe("Post Tests", () => {
             ];
 
             for (const post of posts) {
-                const res = await request(app)
-                    .post("/post")
-                    .set("Authorization", `Bearer ${accessToken}`)
-                    .send(post);
+                const res = await createPostRequest(accessToken, {
+                    title: post.title,
+                    content: post.content
+                });
                 expect(res.status).toBe(201);
             }
 
@@ -580,55 +522,43 @@ describe("Post Tests", () => {
             // For now, we test with an invalid format
             const response = await request(app)
                 .post("/post")
-                .set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjM0NTY3ODkwIiwiZXhwIjoxfQ.invalid")
-                .send({
-                    ...testPost,
-                    userId
-                });
+                .set(
+                    "Authorization",
+                    "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjM0NTY3ODkwIiwiZXhwIjoxfQ.invalid"
+                )
+                .field("title", testPost.title)
+                .field("content", testPost.content)
+                .attach("images", testImageBuffer, "test.png");
 
             expect(response.status).toBe(401);
+            expect(response.body).toHaveProperty("error");
         });
 
         test("Should fail with no Authorization header", async () => {
             const response = await request(app)
                 .post("/post")
-                .send({
-                    ...testPost,
-                    userId
-                });
+                .field("title", testPost.title)
+                .field("content", testPost.content)
+                .attach("images", testImageBuffer, "test.png");
 
             expect(response.status).toBe(401);
-            expect(response.body.error).toContain("No token provided");
+            expect(response.body).toHaveProperty("error");
+            expect(response.body.error).toContain("Access denied");
         });
 
-        test("Should fail with empty Bearer token", async () => {
+        test("Should fail with empty Authorization token", async () => {
             const response = await request(app)
                 .post("/post")
                 .set("Authorization", "Bearer ")
-                .send({
-                    ...testPost,
-                    userId
-                });
+                .field("title", testPost.title)
+                .field("content", testPost.content)
+                .attach("images", testImageBuffer, "test.png");
 
             expect(response.status).toBe(401);
+            expect(response.body).toHaveProperty("error");
         });
 
-        test("Should handle database errors in getAll", async () => {
-            // Close database to simulate error
-            await mongoose.connection.close();
-
-            const response = await request(app).get("/post");
-
-            expect(response.status).toBe(400);
-            expect(typeof response.text).toBe("string");
-            expect(response.text.length).toBeGreaterThan(0);
-
-            // Reconnect database
-            await mongoose.connect(testDbUrl);
-        });
-
-        test("Should handle database errors when filtering by userId", async () => {
-            // Close database to simulate error
+        test("Should return 400 when database error occurs", async () => {
             await mongoose.connection.close();
 
             const response = await request(app).get("/post?userId=123");

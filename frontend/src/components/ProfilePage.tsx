@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { getUserProfile, getUserPosts, updateUserProfile } from '../api/userApi';
+import { updatePost, deletePost } from '../api/postApi';
 import { decodeToken } from '../utils/jwt';
 import { usernameSchema } from '../types/user';
 import type { UserProfile, Post } from '../types/user';
@@ -16,6 +17,15 @@ const ProfilePage: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [isPostEditMode, setIsPostEditMode] = useState(false);
+  const [postTitle, setPostTitle] = useState('');
+  const [postContent, setPostContent] = useState('');
+  const [postSaving, setPostSaving] = useState(false);
+  const [postError, setPostError] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [fullImageUrl, setFullImageUrl] = useState<string | null>(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   // Edit mode state
   const [isEditMode, setIsEditMode] = useState(false);
@@ -184,6 +194,67 @@ const ProfilePage: React.FC = () => {
     setRemovePhoto(false);
     setValidationError(null);
     setError(null);
+  };
+
+  const openPostModal = (post: Post) => {
+    setSelectedPost(post);
+    setIsPostEditMode(false);
+    setPostTitle(post.title);
+    setPostContent(post.content);
+    setPostError(null);
+    setActiveImageIndex(0);
+  };
+
+  const closePostModal = () => {
+    setSelectedPost(null);
+    setIsPostEditMode(false);
+    setPostError(null);
+    setShowDeleteConfirm(false);
+  };
+
+  const handlePostSave = async () => {
+    if (!accessToken || !selectedPost) return;
+    if (!postTitle.trim() || !postContent.trim()) {
+      setPostError('Title and description are required.');
+      return;
+    }
+
+    try {
+      setPostSaving(true);
+      setPostError(null);
+
+      const updated = await updatePost(selectedPost._id, accessToken, {
+        title: postTitle.trim(),
+        content: postContent.trim()
+      });
+
+      setPosts((prev) => prev.map((p) => (p._id === updated._id ? updated : p)));
+      setSelectedPost(updated);
+      setIsPostEditMode(false);
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'response' in err) {
+        const response = (err as { response?: { data?: string | { message?: string } } }).response;
+        const message = typeof response?.data === 'string'
+          ? response.data
+          : response?.data?.message;
+        setPostError(message || 'Failed to update post.');
+      } else {
+        setPostError('Failed to update post.');
+      }
+    } finally {
+      setPostSaving(false);
+    }
+  };
+
+  const handlePostDelete = async () => {
+    if (!accessToken || !selectedPost) return;
+    try {
+      await deletePost(selectedPost._id, accessToken);
+      setPosts((prev) => prev.filter((p) => p._id !== selectedPost._id));
+      closePostModal();
+    } catch (err: unknown) {
+      setPostError('Failed to delete post.');
+    }
   };
 
   // Handle remove photo
@@ -356,19 +427,193 @@ const ProfilePage: React.FC = () => {
         ) : (
           <div className={styles.postsGrid}>
             {posts.map((post) => (
-              <div key={post._id} className={styles.postCard}>
+              <button
+                key={post._id}
+                className={styles.postCard}
+                onClick={() => openPostModal(post)}
+              >
                 <h3 className={styles.postTitle}>{post.title}</h3>
                 <p className={styles.postContent}>{post.content}</p>
+                {post.images && post.images.length > 0 && (
+                  <div className={styles.postImages}>
+                    {post.images.slice(0, 4).map((image) => (
+                      <img
+                        key={image}
+                        src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${image}`}
+                        alt={post.title}
+                        className={styles.postImage}
+                      />
+                    ))}
+                  </div>
+                )}
                 {post.createdAt && (
                   <p className={styles.postDate}>
                     {new Date(post.createdAt).toLocaleDateString()}
                   </p>
                 )}
-              </div>
+                {isOwnProfile && (
+                  <div className={styles.postActions} onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      className={styles.postActionButton}
+                      onClick={() => {
+                        openPostModal(post);
+                        setIsPostEditMode(true);
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.postActionDanger}
+                      onClick={() => {
+                        openPostModal(post);
+                        setShowDeleteConfirm(true);
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </button>
             ))}
           </div>
         )}
       </div>
+
+      {selectedPost && (
+        <div className={styles.modalOverlay} onClick={closePostModal}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <button className={styles.modalClose} onClick={closePostModal}>
+              ×
+            </button>
+
+            {selectedPost.images && selectedPost.images.length > 0 && (
+              <div className={styles.modalImages}>
+                <button
+                  className={styles.carouselButton}
+                  onClick={() =>
+                    setActiveImageIndex((prev) =>
+                      prev === 0 ? selectedPost.images.length - 1 : prev - 1
+                    )
+                  }
+                  aria-label="Previous image"
+                  type="button"
+                >
+                  ‹
+                </button>
+                <img
+                  src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${selectedPost.images[activeImageIndex]}`}
+                  alt={selectedPost.title}
+                  className={styles.modalImage}
+                  onClick={() =>
+                    setFullImageUrl(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${selectedPost.images[activeImageIndex]}`)
+                  }
+                />
+                <button
+                  className={styles.carouselButton}
+                  onClick={() =>
+                    setActiveImageIndex((prev) =>
+                      prev === selectedPost.images.length - 1 ? 0 : prev + 1
+                    )
+                  }
+                  aria-label="Next image"
+                  type="button"
+                >
+                  ›
+                </button>
+              </div>
+            )}
+
+            {isPostEditMode ? (
+              <div className={styles.modalContent}>
+                <label className={styles.modalLabel}>Title</label>
+                <input
+                  className={styles.modalInput}
+                  value={postTitle}
+                  onChange={(e) => setPostTitle(e.target.value)}
+                />
+                <label className={styles.modalLabel}>Description</label>
+                <textarea
+                  className={styles.modalTextarea}
+                  value={postContent}
+                  onChange={(e) => setPostContent(e.target.value)}
+                  rows={5}
+                />
+                {postError && <p className={styles.modalError}>{postError}</p>}
+                <div className={styles.modalActions}>
+                  <button
+                    className={styles.modalPrimary}
+                    onClick={handlePostSave}
+                    disabled={postSaving}
+                  >
+                    {postSaving ? 'Saving...' : 'Save'}
+                  </button>
+                  <button
+                    className={styles.modalSecondary}
+                    onClick={() => setIsPostEditMode(false)}
+                    disabled={postSaving}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className={styles.modalContent}>
+                <h3 className={styles.modalTitle}>{selectedPost.title}</h3>
+                <p className={styles.modalText}>{selectedPost.content}</p>
+                {selectedPost.createdAt && (
+                  <p className={styles.modalDate}>
+                    {new Date(selectedPost.createdAt).toLocaleDateString()}
+                  </p>
+                )}
+                {postError && <p className={styles.modalError}>{postError}</p>}
+                {isOwnProfile && (
+                  <div className={styles.modalActions}>
+                    <button
+                      className={styles.modalPrimary}
+                      onClick={() => setIsPostEditMode(true)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className={styles.modalDanger}
+                      onClick={() => setShowDeleteConfirm(true)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showDeleteConfirm && selectedPost && (
+        <div className={styles.modalOverlay} onClick={() => setShowDeleteConfirm(false)}>
+          <div className={styles.confirmModal} onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.confirmTitle}>Delete this post?</h3>
+            <p className={styles.confirmText}>This action cannot be undone.</p>
+            <div className={styles.modalActions}>
+              <button className={styles.modalDanger} onClick={handlePostDelete}>
+                Delete
+              </button>
+              <button className={styles.modalSecondary} onClick={() => setShowDeleteConfirm(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {fullImageUrl && (
+        <div className={styles.modalOverlay} onClick={() => setFullImageUrl(null)}>
+          <div className={styles.fullImageWrap} onClick={(e) => e.stopPropagation()}>
+            <img src={fullImageUrl} alt="Full size" className={styles.fullImage} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

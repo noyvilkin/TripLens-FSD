@@ -357,6 +357,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1.5rem;
+  align-items: stretch;
 }
 
 .postCard {
@@ -365,6 +366,19 @@
   padding: 1.5rem;
   border: 1px solid rgba(102, 126, 234, 0.15);
   transition: transform 0.2s, box-shadow 0.2s;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+  min-height: 420px;
+}
+
+.postCard:focus {
+  outline: 3px solid rgba(102, 126, 234, 0.3);
+  outline-offset: 2px;
 }
 
 .postCard:hover {
@@ -377,18 +391,259 @@
   font-weight: 600;
   color: #2d3748;
   margin: 0 0 0.75rem 0;
+  min-height: 2.5rem;
 }
 
 .postContent {
   color: #4b5563;
   line-height: 1.6;
   margin: 0 0 0.75rem 0;
+  min-height: 4.5rem;
+}
+
+.postImages {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  min-height: 120px;
+  max-height: 260px;
+  overflow: hidden;
+}
+
+.postImage {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid rgba(102, 126, 234, 0.2);
 }
 
 .postDate {
   color: #9ca3af;
   font-size: 0.875rem;
   margin: 0;
+}
+
+.postActions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 0.4rem;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 999px;
+  padding: 0.2rem;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
+}
+
+.postActionButton,
+.postActionDanger {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.postActionButton {
+  background: rgba(102, 126, 234, 0.15);
+  color: #4f46e5;
+}
+
+.postActionDanger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 1.5rem;
+}
+
+.modal {
+  background: white;
+  border-radius: 16px;
+  width: min(900px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+}
+
+.modalClose {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(15, 23, 42, 0.08);
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.modalImages {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  padding-bottom: 0;
+}
+
+.modalImage {
+  width: 100%;
+  height: 360px;
+  object-fit: cover;
+  border-radius: 12px;
+  cursor: zoom-in;
+}
+
+.carouselButton {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(15, 23, 42, 0.08);
+  font-size: 28px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modalContent {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.modalTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  color: #1f2937;
+}
+
+.modalText {
+  margin: 0;
+  color: #4b5563;
+  line-height: 1.6;
+}
+
+.modalDate {
+  color: #9ca3af;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.modalLabel {
+  font-weight: 600;
+  color: #4b5563;
+  font-size: 0.9rem;
+}
+
+.modalInput,
+.modalTextarea {
+  padding: 0.75rem 0.9rem;
+  border-radius: 10px;
+  border: 2px solid #e2e8f0;
+  font-size: 1rem;
+  background: #f8fafc;
+}
+
+.modalTextarea {
+  resize: vertical;
+}
+
+.modalActions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.modalPrimary {
+  padding: 0.65rem 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.modalSecondary {
+  padding: 0.65rem 1.5rem;
+  background: white;
+  color: #4b5563;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.modalDanger {
+  padding: 0.65rem 1.5rem;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.modalError {
+  color: #b91c1c;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  margin: 0;
+}
+
+.confirmModal {
+  background: white;
+  border-radius: 14px;
+  padding: 1.5rem;
+  width: min(420px, 100%);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.25);
+}
+
+.confirmTitle {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.confirmText {
+  margin: 0 0 1rem 0;
+  color: #6b7280;
+}
+
+.fullImageWrap {
+  background: white;
+  border-radius: 16px;
+  padding: 1rem;
+  max-width: 90vw;
+  max-height: 90vh;
+}
+
+.fullImage {
+  max-width: 85vw;
+  max-height: 80vh;
+  object-fit: contain;
+  display: block;
 }
 
 /* Responsive Design */

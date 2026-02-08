@@ -11,46 +11,60 @@ const PostCreatePage: React.FC = () => {
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageData, setImageData] = useState<string | null>(null);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const inputFiles = Array.from(e.target.files || []);
+    if (inputFiles.length === 0) return;
 
-    if (!file.type.startsWith('image/')) {
-      setValidationError('Please select an image file');
+    for (const file of inputFiles) {
+      if (!file.type.startsWith('image/')) {
+        setValidationError('Please select image files only');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setValidationError('Each image must be less than 5MB');
+        return;
+      }
+    }
+
+    const nextImages = [...selectedImages, ...inputFiles];
+    if (nextImages.length > 6) {
+      setValidationError('You can upload up to 6 photos.');
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setValidationError('Image must be less than 5MB');
-      return;
-    }
-
-    setSelectedImage(file);
+    setSelectedImages(nextImages);
     setValidationError(null);
     setError(null);
     setSuccessMessage(null);
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      setImagePreview(result);
-      setImageData(result);
-    };
-    reader.readAsDataURL(file);
+    Promise.all(
+      nextImages.map(
+        (file) =>
+          new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+          })
+      )
+    ).then(setImagePreviews);
+
+    if (e.target.value) {
+      e.target.value = '';
+    }
   };
 
-  const handleRemoveImage = () => {
-    setSelectedImage(null);
-    setImagePreview(null);
-    setImageData(null);
+  const handleRemoveImage = (index: number) => {
+    const nextImages = selectedImages.filter((_, i) => i !== index);
+    const nextPreviews = imagePreviews.filter((_, i) => i !== index);
+    setSelectedImages(nextImages);
+    setImagePreviews(nextPreviews);
     setSuccessMessage(null);
   };
 
@@ -67,6 +81,11 @@ const PostCreatePage: React.FC = () => {
       return;
     }
 
+    if (selectedImages.length === 0) {
+      setValidationError('At least one photo is required.');
+      return;
+    }
+
     try {
       setSubmitting(true);
       setError(null);
@@ -78,12 +97,12 @@ const PostCreatePage: React.FC = () => {
       await createPost(accessToken, {
         title: title.trim(),
         content: content.trim(),
-        image: imageData || undefined,
-        userId: userId || undefined
+        images: selectedImages
       });
       setTitle('');
       setContent('');
-      handleRemoveImage();
+      setSelectedImages([]);
+      setImagePreviews([]);
       setSuccessMessage('Post created successfully. Redirecting...');
 
       setTimeout(() => {
@@ -153,29 +172,36 @@ const PostCreatePage: React.FC = () => {
           </div>
 
           <div className={styles.inputGroup}>
-            <label className={styles.label}>Trip photo (optional)</label>
+            <label className={styles.label}>Trip photos (required)</label>
             <div className={styles.photoRow}>
               <label className={styles.photoButton}>
                 <input
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={handleImageSelect}
                   className={styles.fileInput}
                 />
-                Choose Photo
+                Choose Photos
               </label>
-              {selectedImage && (
-                <button type="button" className={styles.removeButton} onClick={handleRemoveImage}>
-                  Remove
-                </button>
-              )}
             </div>
-            {selectedImage && (
-              <p className={styles.helperText}>Selected: {selectedImage.name}</p>
+            {selectedImages.length > 0 && (
+              <p className={styles.helperText}>Selected: {selectedImages.length} photos</p>
             )}
-            {imagePreview && (
-              <div className={styles.previewBox}>
-                <img src={imagePreview} alt="Preview" className={styles.previewImage} />
+            {imagePreviews.length > 0 && (
+              <div className={styles.previewGrid}>
+                {imagePreviews.map((preview, index) => (
+                  <div key={preview} className={styles.previewBox}>
+                    <img src={preview} alt={`Preview ${index + 1}`} className={styles.previewImage} />
+                    <button
+                      type="button"
+                      className={styles.previewRemove}
+                      onClick={() => handleRemoveImage(index)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>

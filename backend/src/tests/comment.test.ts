@@ -26,6 +26,11 @@ const testUser2 = {
     password: "Test456!@#"
 };
 
+const testImageBuffer = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=",
+    "base64"
+);
+
 describe("Comment Tests", () => {
     let accessToken: string;
     let accessToken2: string;
@@ -70,21 +75,17 @@ describe("Comment Tests", () => {
         const postRes = await request(app)
             .post("/post")
             .set("Authorization", `Bearer ${accessToken}`)
-            .send({
-                title: "Test Post for Comments",
-                content: "This post will have comments",
-                userId
-            });
+            .field("title", "Test Post for Comments")
+            .field("content", "This post will have comments")
+            .attach("images", testImageBuffer, "test.png");
         postId = postRes.body._id;
 
         const postRes2 = await request(app)
             .post("/post")
             .set("Authorization", `Bearer ${accessToken2}`)
-            .send({
-                title: "Another Test Post",
-                content: "Another post for comments",
-                userId: userId2
-            });
+            .field("title", "Another Test Post")
+            .field("content", "Another post for comments")
+            .attach("images", testImageBuffer, "test.png");
         postId2 = postRes2.body._id;
     });
 

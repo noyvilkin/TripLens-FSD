@@ -18,6 +18,31 @@ class PostController extends BaseController<IPost> {
         this.smartSearch = this.smartSearch.bind(this);
     }
 
+    async updateItem(req: Request, res: Response): Promise<void> {
+        try {
+            const { content, description } = req.body;
+            if (!content && description) {
+                req.body.content = description;
+            }
+
+            if (req.body.content) {
+                const vector = await generateEmbeddings(req.body.content);
+                req.body.vector = vector;
+            }
+
+            const updatedObj = await this.model.findByIdAndUpdate(
+                req.params.id,
+                req.body,
+                { new: true }
+            );
+
+            if (updatedObj) res.status(200).send(updatedObj);
+            else res.status(404).send("Not found");
+        } catch (error) {
+            res.status(400).send((error as Error).message);
+        }
+    }
+
     /**
      * Override the create method to include AI Analysis.
      * When a post is saved, it automatically generates a vector embedding.
@@ -39,10 +64,18 @@ class PostController extends BaseController<IPost> {
             }
 
             // Save the post to MongoDB
+            const files = (req as any).files as Express.Multer.File[] | undefined;
+            const images = files?.map((file) => `/uploads/posts/${file.filename}`) || [];
+
+            if (images.length === 0) {
+                res.status(400).send("At least one image is required");
+                return;
+            }
+
             const item = await this.model.create({
                 title: req.body.title,
                 content: req.body.content,
-                image: req.body.image,
+                images,
                 userId: req.body.userId,
                 vector
             });

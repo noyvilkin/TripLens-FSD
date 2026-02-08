@@ -283,34 +283,32 @@ describe("User Profile & Media Management Tests", () => {
 
     describe("GET /post?userId=:userId - Get User-Specific Posts", () => {
         test("Should retrieve posts for a specific user", async () => {
+            const testImageBuffer = Buffer.from(
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=",
+                "base64"
+            );
             // Create posts for user1
             await request(app)
                 .post("/post")
                 .set("Authorization", `Bearer ${user1Token}`)
-                .send({
-                    title: "User 1 Post 1",
-                    content: "Content 1",
-                    userId: user1Id
-                });
+                .field("title", "User 1 Post 1")
+                .field("content", "Content 1")
+                .attach("images", testImageBuffer, "test.png");
 
             await request(app)
                 .post("/post")
                 .set("Authorization", `Bearer ${user1Token}`)
-                .send({
-                    title: "User 1 Post 2",
-                    content: "Content 2",
-                    userId: user1Id
-                });
+                .field("title", "User 1 Post 2")
+                .field("content", "Content 2")
+                .attach("images", testImageBuffer, "test.png");
 
             // Create post for user2
             await request(app)
                 .post("/post")
                 .set("Authorization", `Bearer ${user2Token}`)
-                .send({
-                    title: "User 2 Post",
-                    content: "Content",
-                    userId: user2Id
-                });
+                .field("title", "User 2 Post")
+                .field("content", "Content")
+                .attach("images", testImageBuffer, "test.png");
 
             // Get posts for user1
             const response = await request(app)

@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { OAuth2Client } from "google-auth-library";
-import UserModel from "../models/user_model";
+import UserModel, { DEFAULT_PROFILE_PIC } from "../models/user_model";
 
 const sendError = (res: Response, message: string, code?: number) => {
     const errCode = code || 400;
@@ -210,7 +210,7 @@ class AuthController {
                 user = await UserModel.create({
                     username: payload.name || payload.email,
                     email: payload.email,
-                    profilePic: payload.picture, // google's profile photo
+                    profilePic: DEFAULT_PROFILE_PIC,
                     refreshToken: []
                 });
             }

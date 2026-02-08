@@ -25,6 +25,9 @@ const Navigation: React.FC = () => {
               My Profile
             </Link>
           )}
+          <Link to="/post/new" className={styles.link}>
+            Create Post
+          </Link>
           <button onClick={handleLogout} className={styles.logoutButton}>
             Logout
           </button>

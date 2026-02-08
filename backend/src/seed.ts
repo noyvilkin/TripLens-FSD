@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import bcrypt from "bcrypt";
 import UserModel from "./models/user_model";
 import PostModel from "./models/post_model";
+import { generateEmbeddings } from "./services/ai_service";
 
 dotenv.config();
 
@@ -101,7 +102,14 @@ const seedData = async () => {
             }
         );
 
-        await PostModel.create(posts);
+        const postsWithVectors = await Promise.all(
+            posts.map(async (post) => ({
+                ...post,
+                vector: await generateEmbeddings(post.content)
+            }))
+        );
+
+        await PostModel.create(postsWithVectors);
         console.log(`Created ${posts.length} posts`);
 
         console.log("\n✅ Seed data created successfully!");

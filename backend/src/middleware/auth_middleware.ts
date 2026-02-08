@@ -42,6 +42,7 @@ const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction): vo
         
         // Attach ID to request for use in controllers (e.g., Post creation)
         req.userId = decoded.userId;
+        (req as any).user = { _id: decoded.userId };
         
         next();
     } catch (error) {

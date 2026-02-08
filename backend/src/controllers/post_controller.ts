@@ -22,28 +22,39 @@ class PostController extends BaseController<IPost> {
      * Override the create method to include AI Analysis.
      * When a post is saved, it automatically generates a vector embedding.
      */
-    async post(req: Request, res: Response) {
+    async post(req: Request, res: Response): Promise<void> {
         try {
             const { content, description } = req.body;
             if (!content && description) {
                 req.body.content = description;
             }
-            
-            // 1. Generate the AI numerical vector from the trip description
-            const textToEmbed = req.body.content || description;
-            if (textToEmbed) {
-                const vector = await generateEmbeddings(textToEmbed);
-                req.body.vector = vector;
-            }
 
-            // 2. Add the sender ID from the authenticated user
+            const textToEmbed = req.body.content || description;
+            const vector = textToEmbed ? await generateEmbeddings(textToEmbed) : [];
+            
+            // Add the sender ID from the authenticated user
             const authUserId = (req as any).userId || req.user?._id;
             if (authUserId) {
                 req.body.userId = authUserId;
             }
 
-            // 3. Use the BaseController to save the post to MongoDB
-            await super.create(req, res); 
+            // Save the post to MongoDB
+            const item = await this.model.create({
+                title: req.body.title,
+                content: req.body.content,
+                image: req.body.image,
+                userId: req.body.userId,
+                vector
+            });
+            if (vector.length > 0 && (!item.vector || item.vector.length === 0)) {
+                await this.model.updateOne({ _id: item._id }, { $set: { vector } });
+                const refreshed = await this.model.findById(item._id);
+                if (refreshed) {
+                    res.status(201).send(refreshed);
+                    return;
+                }
+            }
+            res.status(201).send(item);
         } catch (error) {
             res.status(400).send((error as Error).message);
         }

@@ -5,6 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import LoadingScreen from './components/LoadingScreen';
 import ProfilePage from './components/ProfilePage';
 import Navigation from './components/Navigation';
+import PostCreatePage from './components/PostCreatePage';
 
 function App() {
   const { accessToken, loading } = useAuth();
@@ -53,6 +54,16 @@ function App() {
               <ProfilePage />
             </ProtectedRoute>
           } 
+        />
+
+        {/* Post Creation Route */}
+        <Route
+          path="/post/new"
+          element={
+            <ProtectedRoute>
+              <PostCreatePage />
+            </ProtectedRoute>
+          }
         />
 
         {/* 3. Fallback: Redirect any unknown path to home */}

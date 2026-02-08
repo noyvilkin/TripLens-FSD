@@ -1,11 +1,20 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-const model = genAI.getGenerativeModel({ model: "gemini-embedding-001" });
+let cachedModel: ReturnType<GoogleGenerativeAI["getGenerativeModel"]> | null = null;
+
+const getEmbeddingModel = () => {
+    if (cachedModel) return cachedModel;
+    const apiKey = process.env.GEMINI_API_KEY || "";
+    const genAI = new GoogleGenerativeAI(apiKey);
+    cachedModel = genAI.getGenerativeModel({ model: "gemini-embedding-001" });
+    return cachedModel;
+};
 
 export const generateEmbeddings = async (text: string): Promise<number[]> => {
     try {
         if (!text || !text.trim()) return [];
+
+
 
         // Chunking: split long text into manageable pieces to preserve context.
         // Using ~1000 chars per chunk to stay within token limits safely.
@@ -17,7 +26,7 @@ export const generateEmbeddings = async (text: string): Promise<number[]> => {
 
         const embeddings: number[][] = [];
         for (const chunk of chunks) {
-            const result = await model.embedContent(chunk);
+            const result = await getEmbeddingModel().embedContent(chunk);
             embeddings.push(result.embedding.values);
         }
 

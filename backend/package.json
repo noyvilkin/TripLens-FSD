@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/noy-v/FSD-assignment-2#readme",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@types/swagger-ui-express": "^4.1.8",
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.7",

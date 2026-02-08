@@ -97,6 +97,27 @@ A comprehensive REST API for managing posts, comments, users, and authentication
                     },
                     required: ["title", "content", "userId"]
                 },
+                PostInput: {
+                    type: "object",
+                    properties: {
+                        title: {
+                            type: "string",
+                            description: "Post title",
+                            example: "My First Post"
+                        },
+                        content: {
+                            type: "string",
+                            description: "Post content/body",
+                            example: "This is the content of my first post..."
+                        },
+                        image: {
+                            type: "string",
+                            description: "Optional image URL or path",
+                            example: "/uploads/post.jpg"
+                        }
+                    },
+                    required: ["title", "content"]
+                },
              // Comment Schemas
                 Comment: {
                     type: "object",

@@ -6,6 +6,11 @@ import jwt from "jsonwebtoken";
 import path from "path";
 import fs from "fs";
 
+jest.mock("../services/ai_service", () => ({
+    generateEmbeddings: jest.fn().mockResolvedValue([0.1, 0.2, 0.3]),
+    cosineSimilarity: jest.fn().mockReturnValue(0.9)
+}));
+
 const testDbUrl = process.env.DATABASE_URL || "mongodb://127.0.0.1:27017/triplens_test";
 
 const testUser1 = {

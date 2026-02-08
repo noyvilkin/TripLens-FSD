@@ -5,6 +5,11 @@ import UserModel from "../models/user_model";
 import PostModel from "../models/post_model";
 import CommentModel from "../models/comment_model";
 
+jest.mock("../services/ai_service", () => ({
+    generateEmbeddings: jest.fn().mockResolvedValue([0.1, 0.2, 0.3]),
+    cosineSimilarity: jest.fn().mockReturnValue(0.9)
+}));
+
 // Test database URL
 const testDbUrl = process.env.DATABASE_URL || "mongodb://localhost:27017/test-db";
 
@@ -48,7 +53,7 @@ describe("Comment Tests", () => {
             .post("/auth/register")
             .send(testUser);
         
-        accessToken = registerRes.body.token;
+        accessToken = registerRes.body.accessToken || registerRes.body.token;
         const user = await UserModel.findOne({ email: testUser.email });
         userId = user?._id.toString() || "";
 
@@ -57,7 +62,7 @@ describe("Comment Tests", () => {
             .post("/auth/register")
             .send(testUser2);
         
-        accessToken2 = registerRes2.body.token;
+        accessToken2 = registerRes2.body.accessToken || registerRes2.body.token;
         const user2 = await UserModel.findOne({ email: testUser2.email });
         userId2 = user2?._id.toString() || "";
 

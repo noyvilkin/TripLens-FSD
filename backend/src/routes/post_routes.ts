@@ -10,8 +10,8 @@ const router: Router = express.Router();
  *   post:
  *     summary: Create a new post
  *     description: |
- *       Creates a new post with the provided title, content, and user ID.
- *       The userId should reference an existing user in the system.
+ *       Creates a new post with the provided title and content.
+ *       The userId is derived from the authenticated user.
  *     tags: [Posts]
  *     requestBody:
  *       required: true
@@ -25,7 +25,6 @@ const router: Router = express.Router();
  *               value:
  *                 title: "My First Post"
  *                 content: "This is the content of my first post. Hello, world!"
- *                 userId: "507f1f77bcf86cd799439011"
  *     responses:
  *       201:
  *         description: Post created successfully
@@ -51,7 +50,7 @@ const router: Router = express.Router();
  *     security:
  *       - bearerAuth: []
  */
-router.post("/", authMiddleware, postController.create);
+router.post("/", authMiddleware, postController.post);
 
 /**
  * @swagger

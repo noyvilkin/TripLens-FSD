@@ -1,22 +1,99 @@
 import { Request, Response } from "express";
 import BaseController from "./base_controller";
 import PostModel, { IPost } from "../models/post_model";
+import { generateEmbeddings, cosineSimilarity } from "../services/ai_service";
+
+declare global {
+    namespace Express {
+        interface Request {
+            user?: { _id: string; [key: string]: any };
+        }
+    }
+}
 
 class PostController extends BaseController<IPost> {
     constructor() {
         super(PostModel);
+        this.post = this.post.bind(this);
+        this.smartSearch = this.smartSearch.bind(this);
     }
 
-    // Override or extend getAll to handle ?userId=<user_id>
+    /**
+     * Override the create method to include AI Analysis.
+     * When a post is saved, it automatically generates a vector embedding.
+     */
+    async post(req: Request, res: Response) {
+        try {
+            const { content, description } = req.body;
+            if (!content && description) {
+                req.body.content = description;
+            }
+            
+            // 1. Generate the AI numerical vector from the trip description
+            const textToEmbed = req.body.content || description;
+            if (textToEmbed) {
+                const vector = await generateEmbeddings(textToEmbed);
+                req.body.vector = vector;
+            }
+
+            // 2. Add the sender ID from the authenticated user
+            const authUserId = (req as any).userId || req.user?._id;
+            if (authUserId) {
+                req.body.userId = authUserId;
+            }
+
+            // 3. Use the BaseController to save the post to MongoDB
+            await super.create(req, res); 
+        } catch (error) {
+            res.status(400).send((error as Error).message);
+        }
+    }
+
+    /**
+     * AI Smart Search (RAG Logic)
+     * Finds posts by meaning using Cosine Similarity.
+     */
+    async smartSearch(req: Request, res: Response): Promise<void> {
+        const query = req.query.q as string;
+        if (!query) {
+            res.status(400).send("Search query is required.");
+            return;
+        }
+
+        try {
+            // 1. Convert user search text into a vector
+            const queryVector = await generateEmbeddings(query);
+
+            // 2. Fetch all posts to compare vectors (Local MongoDB limitation)
+            const allPosts = await this.model.find();
+
+            // 3. Rank and filter by AI similarity
+            const rankedPosts = allPosts
+                .map((post: any) => ({
+                    ...post.toObject(),
+                    similarity: cosineSimilarity(queryVector, post.vector || [])
+                }))
+                .filter(post => post.similarity > 0.7) // Only return relevant matches
+                .sort((a, b) => b.similarity - a.similarity);
+
+            res.status(200).send(rankedPosts);
+        } catch (error) {
+            res.status(500).send("AI Search failed. Please check your API key.");
+        }
+    }
+
+    /**
+     * Get All Posts with optional userId filtering.
+     */
     async getAll(req: Request, res: Response): Promise<void> {
         const userIdFilter = req.query.userId as string | undefined;
         try {
             if (userIdFilter) {
-                // If userId query exists: /post?userId=123
+                // Return only posts for a specific user profile
                 const posts = await this.model.find({ userId: userIdFilter });
                 res.status(200).send(posts);
             } else {
-                // Standard Get All: /post
+                // Standard Get All for the main feed
                 super.getAll(req, res);
             }
         } catch (error) {

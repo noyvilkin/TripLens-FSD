@@ -4,6 +4,11 @@ import mongoose from "mongoose";
 import UserModel from "../models/user_model";
 import PostModel from "../models/post_model";
 
+jest.mock("../services/ai_service", () => ({
+    generateEmbeddings: jest.fn().mockResolvedValue([0.1, 0.2, 0.3]),
+    cosineSimilarity: jest.fn().mockReturnValue(0.9)
+}));
+
 // Test database URL
 const testDbUrl = process.env.DATABASE_URL || "mongodb://localhost:27017/test-db";
 
@@ -50,7 +55,7 @@ describe("Post Tests", () => {
             .post("/auth/register")
             .send(testUser);
         
-        accessToken = registerRes.body.token;
+        accessToken = registerRes.body.accessToken || registerRes.body.token;
         const user = await UserModel.findOne({ email: testUser.email });
         userId = user?._id.toString() || "";
 
@@ -59,7 +64,7 @@ describe("Post Tests", () => {
             .post("/auth/register")
             .send(testUser2);
         
-        accessToken2 = registerRes2.body.token;
+        accessToken2 = registerRes2.body.accessToken || registerRes2.body.token;
         const user2 = await UserModel.findOne({ email: testUser2.email });
         userId2 = user2?._id.toString() || "";
     });
@@ -160,7 +165,7 @@ describe("Post Tests", () => {
             expect(response.status).toBe(400);
         });
 
-        test("Should fail to create post without userId", async () => {
+        test("Should create post without userId using auth context", async () => {
             const response = await request(app)
                 .post("/post")
                 .set("Authorization", `Bearer ${accessToken}`)
@@ -169,7 +174,9 @@ describe("Post Tests", () => {
                     content: testPost.content
                 });
 
-            expect(response.status).toBe(400);
+            expect(response.status).toBe(201);
+            expect(response.body).toHaveProperty("_id");
+            expect(response.body.userId).toBe(userId);
         });
     });
 

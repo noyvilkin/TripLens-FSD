@@ -49,8 +49,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ isLoginMode }) => {
         await auth?.register(data as RegisterFormData);
       }
     } catch (err: unknown) {
-      const axiosError = err as AxiosError<{ error: string }>;
-      const errorMsg = axiosError.response?.data?.error || "An unexpected error occurred";
+      const axiosError = err as AxiosError<{ error?: string; message?: string }>;
+      const errorMsg = axiosError.response?.data?.message || axiosError.response?.data?.error || "An unexpected error occurred";
       setServerError(errorMsg);
     } finally {
       setIsLoading(false);
@@ -67,8 +67,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ isLoginMode }) => {
     try {
       await auth?.googleLogin(credentialResponse.credential);
     } catch (err: unknown) {
-      const axiosError = err as AxiosError<{ error: string }>;
-      const errorMsg = axiosError.response?.data?.error || "Google login failed";
+      const axiosError = err as AxiosError<{ error?: string; message?: string }>;
+      const errorMsg = axiosError.response?.data?.message || axiosError.response?.data?.error || "Google login failed";
       setGoogleError(errorMsg);
     } finally {
       setIsLoading(false);

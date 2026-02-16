@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { AxiosError } from 'axios';
-import api from '../api/axios';
+import api, { setAccessToken as setApiAccessToken } from '../api/axios';
 import { AuthContext } from './AuthContext';
 import type { AuthProviderProps, LoginFormData, RegisterFormData, AuthError } from '../types/auth';
+
+const SESSION_FLAG_KEY = 'triplens_has_session';
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -13,19 +15,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     let isMounted = true;
     let hasRefreshed = false; // Prevent double-refresh in StrictMode
+    const controller = new AbortController();
+
+    const hasSession = localStorage.getItem(SESSION_FLAG_KEY) === 'true';
+    if (!hasSession) {
+      setApiAccessToken(null);
+      setLoading(false);
+      return;
+    }
     
     const refresh = async () => {
       if (hasRefreshed) return; // Skip if already attempted
       hasRefreshed = true;
       
       try {
-        const res = await api.post('/auth/refresh');
+        const res = await api.post('/auth/refresh', undefined, { 
+          timeout: 4000,
+          signal: controller.signal 
+        });
         if (isMounted) {
           setAccessToken(res.data.accessToken);
+          setApiAccessToken(res.data.accessToken);
+          localStorage.setItem(SESSION_FLAG_KEY, 'true');
         }
-      } catch {
+      } catch (err) {
+        if (err && typeof err === 'object' && 'code' in err) {
+          const code = (err as { code?: string }).code;
+          if (code === 'ERR_CANCELED') return;
+        }
         if (isMounted) {
           setAccessToken(null);
+          setApiAccessToken(null);
+          localStorage.removeItem(SESSION_FLAG_KEY);
         }
       } finally {
         if (isMounted) {
@@ -38,6 +59,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     return () => {
       isMounted = false;
+      controller.abort();
     };
   }, []);
 
@@ -46,10 +68,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setError(null);
       const res = await api.post('/auth/login', data);
       setAccessToken(res.data.accessToken);
+      setApiAccessToken(res.data.accessToken);
+      localStorage.setItem(SESSION_FLAG_KEY, 'true');
     } catch (err) {
-      const axiosError = err as AxiosError<{ message: string }>;
+      const axiosError = err as AxiosError<{ message?: string; error?: string }>;
       setError({
-        message: axiosError.response?.data?.message || 'Login failed. Please try again.',
+        message: axiosError.response?.data?.message || axiosError.response?.data?.error || 'Login failed. Please try again.',
       });
       throw err;
     }
@@ -60,10 +84,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setError(null);
       const res = await api.post('/auth/register', data);
       setAccessToken(res.data.accessToken);
+      setApiAccessToken(res.data.accessToken);
+      localStorage.setItem(SESSION_FLAG_KEY, 'true');
     } catch (err) {
-      const axiosError = err as AxiosError<{ message: string }>;
+      const axiosError = err as AxiosError<{ message?: string; error?: string }>;
       setError({
-        message: axiosError.response?.data?.message || 'Registration failed. Please try again.',
+        message: axiosError.response?.data?.message || axiosError.response?.data?.error || 'Registration failed. Please try again.',
       });
       throw err;
     }
@@ -74,18 +100,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setError(null);
       const res = await api.post('/auth/google', { credential });
       setAccessToken(res.data.accessToken);
+      setApiAccessToken(res.data.accessToken);
+      localStorage.setItem(SESSION_FLAG_KEY, 'true');
     } catch (err) {
-      const axiosError = err as AxiosError<{ message: string }>;
+      const axiosError = err as AxiosError<{ message?: string; error?: string }>;
       setError({
-        message: axiosError.response?.data?.message || 'Google login failed. Please try again.',
+        message: axiosError.response?.data?.message || axiosError.response?.data?.error || 'Google login failed. Please try again.',
       });
       throw err;
     }
   };
 
   const logout = async () => {
-    await api.post('/auth/logout');
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      // Ignore logout errors
+    }
     setAccessToken(null);
+    setApiAccessToken(null);
+    localStorage.removeItem(SESSION_FLAG_KEY);
     setError(null);
   };
 

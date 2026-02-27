@@ -55,16 +55,19 @@ const seedData = async () => {
             {
                 title: "Golden Hour in Santorini",
                 content: "Whitewashed cliffs, blue domes, and a sunset that made time stop. The view from Oia was absolutely breathtaking!",
+                images: ["/uploads/posts/default-travel-image.png"],
                 userId: users[0]._id
             },
             {
                 title: "Kyoto Lantern Walk",
                 content: "Quiet alleys, warm lantern glow, and a matcha break by the river. The temples here are so peaceful.",
+                images: ["/uploads/posts/default-travel-image.png"],
                 userId: users[0]._id
             },
             {
                 title: "Alpine Lake Escape",
                 content: "Crystal water, pine air, and a sunrise hike with a view. Nothing beats waking up to mountain peaks.",
+                images: ["/uploads/posts/default-travel-image.png"],
                 userId: users[0]._id
             }
         );
@@ -74,11 +77,13 @@ const seedData = async () => {
             {
                 title: "Tokyo Street Food Adventure",
                 content: "From ramen to takoyaki, every bite was incredible. The energy in Shibuya at night is unmatched!",
+                images: ["/uploads/posts/default-travel-image.png"],
                 userId: users[1]._id
             },
             {
                 title: "Northern Lights in Iceland",
                 content: "Dancing green lights across the sky. Worth every freezing minute! Hot chocolate by the fire after was perfect.",
+                images: ["/uploads/posts/default-travel-image.png"],
                 userId: users[1]._id
             }
         );
@@ -88,16 +93,19 @@ const seedData = async () => {
             {
                 title: "Safari in Tanzania",
                 content: "Witnessed the great migration and saw lions, elephants, and giraffes in their natural habitat. Life-changing experience!",
+                images: ["/uploads/posts/default-travel-image.png"],
                 userId: users[2]._id
             },
             {
                 title: "Beach Paradise in Maldives",
                 content: "Crystal clear waters, overwater bungalows, and the most stunning coral reefs. Pure relaxation and beauty.",
+                images: ["/uploads/posts/default-travel-image.png"],
                 userId: users[2]._id
             },
             {
                 title: "Amsterdam Canal Tour",
                 content: "Cycling through the city, exploring museums, and cruising the canals. Such a charming and artistic city!",
+                images: ["/uploads/posts/default-travel-image.png"],
                 userId: users[2]._id
             }
         );

@@ -1,9 +1,10 @@
-import express, { Express } from "express";
+import express, { Express, Request, Response, NextFunction } from "express";
 import mongoose from "mongoose";
 import "dotenv/config";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import path from "path";
+import fs from "fs";
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./swagger";
 import userRoutes from "./routes/user_routes";
@@ -35,8 +36,21 @@ app.use(express.json()); // To parse JSON bodies
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser()); // To read refresh tokens from cookies
 
-// Serve static files (uploaded images)
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Serve static files (uploaded images) with error handling for missing files
+app.use('/uploads', (req: Request, res: Response, next: NextFunction) => {
+    const filePath = path.join(__dirname, '../uploads', req.path);
+    
+    // Check if file exists
+    fs.access(filePath, fs.constants.F_OK, (err) => {
+        if (err) {
+            // File doesn't exist - return 404 instead of crashing
+            res.status(404).json({ error: 'File not found' });
+            return;
+        }
+        // File exists - serve it normally
+        express.static(path.join(__dirname, '../uploads'))(req, res, next);
+    });
+});
 
 
 // Swagger Documentation

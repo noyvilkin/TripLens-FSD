@@ -14,7 +14,11 @@ export const generateEmbeddings = async (text: string): Promise<number[]> => {
     try {
         if (!text || !text.trim()) return [];
 
-
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey || !apiKey.trim()) {
+            console.warn("GEMINI_API_KEY not found in environment variables. Skipping embedding generation.");
+            return [];
+        }
 
         // Chunking: split long text into manageable pieces to preserve context.
         // Using ~1000 chars per chunk to stay within token limits safely.

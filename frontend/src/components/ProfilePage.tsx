@@ -310,23 +310,20 @@ const ProfilePage: React.FC = () => {
     return null;
   }
 
-  // Dummy profile image SVG
-  const dummyProfileImage = `data:image/svg+xml;utf8,${encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-      <defs>
-        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#667eea"/>
-          <stop offset="100%" stop-color="#764ba2"/>
-        </linearGradient>
-      </defs>
-      <rect width="200" height="200" rx="100" fill="url(#g)"/>
-      <circle cx="100" cy="80" r="36" fill="rgba(255,255,255,0.9)"/>
-      <path d="M40 170c12-30 44-50 60-50s48 20 60 50" fill="rgba(255,255,255,0.9)"/>
-    </svg>`
-  )}`;
+  // Default profile image
+  const defaultProfileImage = "/user.png";
 
-  const profileImageUrl = imagePreview ||
-    (profile.profilePic ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${profile.profilePic}` : dummyProfileImage);
+  const profileImageUrl = imagePreview || (() => {
+    if (!profile.profilePic || profile.profilePic.trim() === "") {
+      return defaultProfileImage;
+    }
+    // If it's a data URI (starts with data:), use it directly
+    if (profile.profilePic.startsWith('data:')) {
+      return defaultProfileImage; // Use our custom user.png instead of the default SVG
+    }
+    // If it's a relative path, prepend the API URL
+    return `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${profile.profilePic}`;
+  })();
 
   // Safe date formatting
   const joinedDate = profile.createdAt ? new Date(profile.createdAt) : null;
@@ -340,7 +337,18 @@ const ProfilePage: React.FC = () => {
         <div className={styles.profileSection}>
           {/* Profile Image */}
           <div className={styles.imageContainer}>
-            <img src={removePhoto ? dummyProfileImage : profileImageUrl} alt={profile.username} className={styles.profileImage} />
+            <img 
+              src={removePhoto ? defaultProfileImage : profileImageUrl} 
+              alt={profile.username} 
+              className={styles.profileImage}
+              onError={(e) => {
+                // If image fails to load, use default image
+                const target = e.target as HTMLImageElement;
+                if (target.src !== defaultProfileImage) {
+                  target.src = defaultProfileImage;
+                }
+              }}
+            />
             
             {/* Image Upload Buttons (Edit Mode Only) */}
             {isEditMode && isOwnProfile && (

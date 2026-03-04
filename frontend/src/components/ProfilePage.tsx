@@ -270,7 +270,7 @@ const ProfilePage: React.FC = () => {
       await deletePost(selectedPost._id, accessToken);
       setPosts((prev) => prev.filter((p) => p._id !== selectedPost._id));
       closePostModal();
-    } catch (err: unknown) {
+    } catch (_err: unknown) {
       setPostError('Failed to delete post.');
     }
   };

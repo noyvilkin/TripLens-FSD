@@ -1,92 +1,125 @@
 #!/bin/bash
 
 # TripLens Deployment Script
-# Run this on your Linux server to deploy the latest changes
+# This script automates the deployment process for the TripLens application
 
 set -e  # Exit on any error
 
-echo "=========================================="
-echo "  TripLens Deployment Script"
-echo "=========================================="
+echo "=================================="
+echo "TripLens Deployment Script"
+echo "=================================="
 echo ""
 
-# Get the directory where the script is located
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "$SCRIPT_DIR"
+# Colors for output
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
 
-echo "📁 Working directory: $SCRIPT_DIR"
-echo ""
+# Function to print colored output
+print_success() {
+    echo -e "${GREEN}✓ $1${NC}"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠ $1${NC}"
+}
+
+print_error() {
+    echo -e "${RED}✗ $1${NC}"
+}
+
+# Check if running from correct directory
+if [ ! -f "package.json" ] && [ ! -d "backend" ]; then
+    print_error "Please run this script from the TripLens-FSD root directory"
+    exit 1
+fi
 
 # Step 1: Pull latest changes
-echo "🔄 Step 1: Pulling latest changes from Git..."
-git pull origin main
-if [ $? -ne 0 ]; then
-    echo "❌ Git pull failed!"
+echo "Step 1: Pulling latest changes from repository..."
+if git pull origin main; then
+    print_success "Git pull completed"
+else
+    print_error "Git pull failed"
     exit 1
 fi
-echo "✅ Git pull successful"
-echo ""
 
-# Step 2: Backend deployment
-echo "🚀 Step 2: Deploying Backend..."
+# Step 2: Install backend dependencies
+echo ""
+echo "Step 2: Installing backend dependencies..."
 cd backend
-
-echo "  📦 Installing backend dependencies..."
-npm install
-if [ $? -ne 0 ]; then
-    echo "❌ Backend npm install failed!"
+if npm install; then
+    print_success "Backend dependencies installed"
+else
+    print_error "Backend dependency installation failed"
     exit 1
 fi
 
-echo "  🔨 Building backend..."
-npm run build
-if [ $? -ne 0 ]; then
-    echo "❌ Backend build failed!"
-    exit 1
-fi
-
-echo "  🔄 Restarting backend with PM2..."
-pm2 restart triplens-backend 2>/dev/null || pm2 start ecosystem.config.js
-if [ $? -ne 0 ]; then
-    echo "❌ PM2 restart failed!"
-    exit 1
-fi
-
-echo "✅ Backend deployed successfully"
+# Step 3: Build backend
 echo ""
-
-# Step 3: Frontend deployment
-echo "🎨 Step 3: Deploying Frontend..."
-cd ../frontend
-
-echo "  📦 Installing frontend dependencies..."
-npm install
-if [ $? -ne 0 ]; then
-    echo "❌ Frontend npm install failed!"
+echo "Step 3: Building backend..."
+if npm run build; then
+    print_success "Backend build completed"
+else
+    print_error "Backend build failed"
     exit 1
 fi
 
-echo "  🔨 Building frontend..."
-npm run build
-if [ $? -ne 0 ]; then
-    echo "❌ Frontend build failed!"
-    exit 1
-fi
+cd ..
 
-echo "✅ Frontend built successfully"
+# Step 4: Install frontend dependencies
 echo ""
+echo "Step 4: Installing frontend dependencies..."
+cd frontend
+if npm install; then
+    print_success "Frontend dependencies installed"
+else
+    print_error "Frontend dependency installation failed"
+    exit 1
+fi
 
-# Step 4: Show PM2 status
-echo "📊 PM2 Status:"
+# Step 5: Build frontend
+echo ""
+echo "Step 5: Building frontend..."
+if npm run build; then
+    print_success "Frontend build completed"
+else
+    print_error "Frontend build failed"
+    exit 1
+fi
+
+cd ..
+
+# Step 6: Restart backend with PM2
+echo ""
+echo "Step 6: Restarting backend application with PM2..."
+cd backend
+if pm2 restart triplens-backend 2>/dev/null; then
+    print_success "Backend application restarted"
+else
+    print_warning "Backend not running, starting new instance..."
+    if pm2 start ecosystem.config.js; then
+        print_success "Backend application started"
+    else
+        print_error "Failed to start backend application"
+        exit 1
+    fi
+fi
+
+cd ..
+
+# Final status check
+echo ""
+echo "=================================="
+echo "Deployment Summary"
+echo "=================================="
 pm2 list
-
 echo ""
-echo "=========================================="
-echo "  ✅ Deployment Complete!"
-echo "=========================================="
+print_success "Deployment completed successfully!"
 echo ""
-echo "🔗 Backend should be running on your configured port"
-echo "📝 Check logs with: pm2 logs triplens-backend"
-echo "🔄 Restart with: pm2 restart triplens-backend"
-echo "🛑 Stop with: pm2 stop triplens-backend"
+echo "Useful commands:"
+echo "  - View logs: pm2 logs triplens-backend"
+echo "  - Stop app: pm2 stop triplens-backend"
+echo "  - Restart app: pm2 restart triplens-backend"
+echo "  - App status: pm2 status"
 echo ""

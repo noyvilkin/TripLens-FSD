@@ -5,22 +5,26 @@ import { Request } from "express";
 
 const uploadDir = path.join(__dirname, "../../uploads/posts");
 
-if (!fs.existsSync(uploadDir)) {
+// Only create upload directory if not in test mode
+if (process.env.NODE_ENV !== "test" && !fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-const storage: StorageEngine = multer.diskStorage({
-    destination: (_req: Request, _file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
-        cb(null, uploadDir);
-    },
-    filename: (req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
-        const userId = (req as any).userId || "unknown";
-        const timestamp = Date.now();
-        const ext = path.extname(file.originalname);
-        const filename = `${userId}-${timestamp}-${Math.round(Math.random() * 1e6)}${ext}`;
-        cb(null, filename);
-    }
-});
+// Use memory storage in test environment
+const storage: StorageEngine = process.env.NODE_ENV === "test"
+    ? multer.memoryStorage()
+    : multer.diskStorage({
+        destination: (_req: Request, _file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
+            cb(null, uploadDir);
+        },
+        filename: (req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
+            const userId = (req as any).userId || "unknown";
+            const timestamp = Date.now();
+            const ext = path.extname(file.originalname);
+            const filename = `${userId}-${timestamp}-${Math.round(Math.random() * 1e6)}${ext}`;
+            cb(null, filename);
+        }
+    });
 
 const fileFilter = (_req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
     const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];

@@ -5,20 +5,22 @@ import { Request } from "express";
 // Define upload directory
 const uploadDir = path.join(__dirname, "../../uploads/profiles");
 
-// Configure storage
-const storage: StorageEngine = multer.diskStorage({
-    destination: (_req: Request, _file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
-        cb(null, uploadDir);
-    },
-    filename: (req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
-        // Generate filename: userId-timestamp.ext
-        const userId = (req as any).userId || "unknown";
-        const timestamp = Date.now();
-        const ext = path.extname(file.originalname);
-        const filename = `${userId}-${timestamp}${ext}`;
-        cb(null, filename);
-    }
-});
+// Configure storage - use memory storage in test environment
+const storage: StorageEngine = process.env.NODE_ENV === "test" 
+    ? multer.memoryStorage()
+    : multer.diskStorage({
+        destination: (_req: Request, _file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
+            cb(null, uploadDir);
+        },
+        filename: (req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
+            // Generate filename: userId-timestamp.ext
+            const userId = (req as any).userId || "unknown";
+            const timestamp = Date.now();
+            const ext = path.extname(file.originalname);
+            const filename = `${userId}-${timestamp}${ext}`;
+            cb(null, filename);
+        }
+    });
 
 // File filter - only allow images
 const fileFilter = (_req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {

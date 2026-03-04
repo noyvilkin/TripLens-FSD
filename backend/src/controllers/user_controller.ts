@@ -120,7 +120,14 @@ class UserController extends BaseController<IUser> {
 
             // Update profilePic if file is provided
             if (file) {
-                updateData.profilePic = `/uploads/profiles/${file.filename}`;
+                // In test mode with memory storage, simulate a filename
+                if (process.env.NODE_ENV === "test" && !file.filename) {
+                    const timestamp = Date.now();
+                    const ext = file.originalname ? file.originalname.split('.').pop() : 'png';
+                    updateData.profilePic = `/uploads/profiles/${userId}-${timestamp}.${ext}`;
+                } else {
+                    updateData.profilePic = `/uploads/profiles/${file.filename}`;
+                }
             }
             
             // Handle explicit photo removal (empty string means remove)

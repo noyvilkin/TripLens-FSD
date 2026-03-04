@@ -68,13 +68,15 @@ describe("User Profile & Media Management Tests", () => {
     });
 
     afterEach(async () => {
-        // Clean up uploaded files
-        const uploadsDir = path.join(__dirname, "../../uploads/profiles");
-        if (fs.existsSync(uploadsDir)) {
-            const files = fs.readdirSync(uploadsDir);
-            files.forEach(file => {
-                fs.unlinkSync(path.join(uploadsDir, file));
-            });
+        // Clean up uploaded files (only in non-test environments)
+        if (process.env.NODE_ENV !== "test") {
+            const uploadsDir = path.join(__dirname, "../../uploads/profiles");
+            if (fs.existsSync(uploadsDir)) {
+                const files = fs.readdirSync(uploadsDir);
+                files.forEach(file => {
+                    fs.unlinkSync(path.join(uploadsDir, file));
+                });
+            }
         }
     });
 

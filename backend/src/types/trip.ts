@@ -1,3 +1,10 @@
+export interface TripComment {
+  userId: string;
+  username: string;
+  text: string;
+  createdAt: string;
+}
+
 export interface Trip {
   _id: string;
   title: string;
@@ -6,6 +13,8 @@ export interface Trip {
   userId: string;
   vector?: number[];
   score?: number;
+  likes: string[];
+  comments: TripComment[];
   createdAt?: string;
   updatedAt?: string;
 }

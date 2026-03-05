@@ -159,6 +159,70 @@ router.get("/:id", postController.getById);
 
 /**
  * @swagger
+ * /post/{id}/like:
+ *   patch:
+ *     summary: Toggle like on a post
+ *     description: Adds or removes the authenticated user's like from a post.
+ *     tags: [Posts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The post ID
+ *     responses:
+ *       200:
+ *         description: Like toggled successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Post not found
+ *     security:
+ *       - bearerAuth: []
+ */
+router.patch("/:id/like", authMiddleware, postController.toggleLike);
+
+/**
+ * @swagger
+ * /post/{id}/comment:
+ *   post:
+ *     summary: Add a comment to a post
+ *     description: Appends a new comment to the post's comments array.
+ *     tags: [Posts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The post ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [text]
+ *             properties:
+ *               text:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Comment added successfully
+ *       400:
+ *         description: Comment text cannot be empty
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Post not found
+ *     security:
+ *       - bearerAuth: []
+ */
+router.post("/:id/comment", authMiddleware, postController.addComment);
+
+/**
+ * @swagger
  * /post/{id}:
  *   put:
  *     summary: Update a post

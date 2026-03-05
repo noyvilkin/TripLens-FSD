@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getPosts } from '../api/postApi';
 import type { Post, PostAuthor } from '../types/user';
+import PostDetail from './PostDetail';
 import styles from './TripFeed.module.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -25,7 +26,6 @@ const TripFeed: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [modalImageIndex, setModalImageIndex] = useState(0);
   const [activeImageIndex, setActiveImageIndex] = useState<Record<string, number>>({});
 
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -95,7 +95,6 @@ const TripFeed: React.FC = () => {
 
   const openPost = (post: Post) => {
     setSelectedPost(post);
-    setModalImageIndex(0);
   };
 
   const closePost = () => {
@@ -238,102 +237,16 @@ const TripFeed: React.FC = () => {
       </div>
 
       {/* ========== Post Detail Modal ========== */}
-      {selectedPost && (() => {
-        const author = getAuthor(selectedPost.userId);
-        return (
-          <div className={styles.modalOverlay} onClick={closePost}>
-            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-              <button className={styles.modalClose} onClick={closePost} type="button">
-                &times;
-              </button>
-
-              {/* Modal image carousel */}
-              {selectedPost.images.length > 0 && (
-                <div className={styles.modalImageWrap}>
-                  {selectedPost.images.length > 1 && (
-                    <button
-                      className={`${styles.modalCarouselBtn} ${styles.modalCarouselPrev}`}
-                      onClick={() =>
-                        setModalImageIndex((i) =>
-                          i === 0 ? selectedPost.images.length - 1 : i - 1
-                        )
-                      }
-                      type="button"
-                    >
-                      &#8249;
-                    </button>
-                  )}
-                  <img
-                    src={`${API_URL}${selectedPost.images[modalImageIndex]}`}
-                    alt={selectedPost.title}
-                    className={styles.modalImage}
-                  />
-                  {selectedPost.images.length > 1 && (
-                    <button
-                      className={`${styles.modalCarouselBtn} ${styles.modalCarouselNext}`}
-                      onClick={() =>
-                        setModalImageIndex((i) =>
-                          i === selectedPost.images.length - 1 ? 0 : i + 1
-                        )
-                      }
-                      type="button"
-                    >
-                      &#8250;
-                    </button>
-                  )}
-                  {selectedPost.images.length > 1 && (
-                    <div className={styles.modalDots}>
-                      {selectedPost.images.map((_, i) => (
-                        <span
-                          key={i}
-                          className={`${styles.dot} ${i === modalImageIndex ? styles.dotActive : ''}`}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Modal content */}
-              <div className={styles.modalBody}>
-                <div className={styles.modalAuthorRow}>
-                  <button
-                    className={styles.authorLink}
-                    onClick={(e) => { closePost(); goToProfile(e, author); }}
-                    type="button"
-                  >
-                    <img
-                      src={getAvatarUrl(author)}
-                      alt={author?.username || 'User'}
-                      className={styles.avatar}
-                      onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_AVATAR; }}
-                    />
-                    <span className={styles.authorName}>{author?.username || 'Unknown'}</span>
-                  </button>
-                  {selectedPost.createdAt && (
-                    <span className={styles.modalDate}>
-                      {new Date(selectedPost.createdAt).toLocaleDateString(undefined, {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
-                    </span>
-                  )}
-                </div>
-
-                <h2 className={styles.modalTitle}>{selectedPost.title}</h2>
-                <p className={styles.modalText}>{selectedPost.content}</p>
-
-                {selectedPost.images.length > 1 && (
-                  <p className={styles.imageCount}>
-                    {selectedPost.images.length} photos
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {selectedPost && (
+        <PostDetail
+          post={selectedPost}
+          onClose={closePost}
+          onPostUpdate={(updated) => {
+            setSelectedPost(updated);
+            setPosts(prev => prev.map(p => p._id === updated._id ? updated : p));
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -1,12 +1,28 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
+export interface IComment {
+    userId: string;
+    username: string;
+    text: string;
+    createdAt: Date;
+}
+
 export interface IPost extends Document {
     title: string;
     content: string; 
     images: string[];
     userId: Types.ObjectId;
-    vector?: number[]; 
+    vector?: number[];
+    likes: string[];
+    comments: IComment[];
 }
+
+const commentSchema = new Schema<IComment>({
+    userId: { type: String, required: true },
+    username: { type: String, required: true },
+    text: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now }
+}, { _id: false });
 
 const postSchema = new Schema<IPost>({
     title: {
@@ -30,10 +46,17 @@ const postSchema = new Schema<IPost>({
         ref: "Users",
         required: true
     },
-    // The vector field stores the [0.12, -0.04...] numerical data from Gemini
     vector: { 
         type: [Number], 
         default: [] 
+    },
+    likes: {
+        type: [String],
+        default: []
+    },
+    comments: {
+        type: [commentSchema],
+        default: []
     }
 }, { timestamps: true });
 

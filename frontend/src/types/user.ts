@@ -15,6 +15,14 @@ export interface PostAuthor {
   profilePic?: string;
 }
 
+// Comment embedded in a post
+export interface PostComment {
+  userId: string;
+  username: string;
+  text: string;
+  createdAt: string;
+}
+
 // Post data
 export interface Post {
   _id: string;
@@ -22,6 +30,8 @@ export interface Post {
   content: string;
   images: string[];
   userId: string | PostAuthor;
+  likes: string[];
+  comments: PostComment[];
   createdAt?: string;
   updatedAt?: string;
 }

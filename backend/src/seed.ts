@@ -113,7 +113,7 @@ const seedData = async () => {
         const postsWithVectors = await Promise.all(
             posts.map(async (post) => ({
                 ...post,
-                vector: await generateEmbeddings(post.content)
+                vector: await generateEmbeddings(`${post.title} - ${post.content}`)
             }))
         );
 

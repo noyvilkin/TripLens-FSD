@@ -7,6 +7,7 @@ import ProfilePage from './components/ProfilePage';
 import Navigation from './components/Navigation';
 import PostCreatePage from './components/PostCreatePage';
 import DiscoverPage from './components/DiscoverPage';
+import TripFeed from './components/TripFeed';
 
 function App() {
   const { accessToken, loading } = useAuth();
@@ -39,7 +40,7 @@ function App() {
           path="/" 
           element={
             <ProtectedRoute>
-              <DiscoverPage />
+              <TripFeed />
             </ProtectedRoute>
           } 
         />

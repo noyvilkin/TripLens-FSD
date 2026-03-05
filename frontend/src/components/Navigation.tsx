@@ -20,6 +20,9 @@ const Navigation: React.FC = () => {
         </Link>
 
         <div className={styles.links}>
+          <Link to="/" className={styles.link}>
+            Feed
+          </Link>
           <Link to="/discover" className={styles.link}>
             Discover
           </Link>

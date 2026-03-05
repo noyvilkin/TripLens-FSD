@@ -128,19 +128,32 @@ class PostController extends BaseController<IPost> {
     }
 
     /**
-     * Get All Posts with optional userId filtering.
+     * Get All Posts with offset pagination and optional userId filtering.
+     * Returns { posts, totalPages, currentPage }.
      */
     async getAll(req: Request, res: Response): Promise<void> {
         const userIdFilter = req.query.userId as string | undefined;
+        const defaultLimit = parseInt(process.env.DEFAULT_PAGE_LIMIT || "10", 10);
+        const page = Math.max(1, parseInt(req.query.page as string) || 1);
+        const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || defaultLimit));
+
         try {
-            if (userIdFilter) {
-                // Return only posts for a specific user profile
-                const posts = await this.model.find({ userId: userIdFilter });
-                res.status(200).send(posts);
-            } else {
-                // Standard Get All for the main feed
-                super.getAll(req, res);
-            }
+            const filter = userIdFilter ? { userId: userIdFilter } : {};
+            const totalPosts = await this.model.countDocuments(filter);
+            const totalPages = Math.ceil(totalPosts / limit) || 1;
+
+            const posts = await this.model
+                .find(filter)
+                .sort({ createdAt: -1 })
+                .skip((page - 1) * limit)
+                .limit(limit)
+                .populate("userId", "username profilePic");
+
+            res.status(200).json({
+                posts,
+                totalPages,
+                currentPage: page,
+            });
         } catch (error) {
             res.status(400).send((error as Error).message);
         }

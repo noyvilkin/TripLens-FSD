@@ -10,6 +10,12 @@ export interface Trip {
   updatedAt?: string;
 }
 
+export interface PaginationResponse {
+  posts: Trip[];
+  totalPages: number;
+  currentPage: number;
+}
+
 export interface SmartSearchRequest {
   query: string;
 }

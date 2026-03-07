@@ -6,6 +6,8 @@ import type { AuthProviderProps, LoginFormData, RegisterFormData, AuthError } fr
 
 const SESSION_FLAG_KEY = 'triplens_has_session';
 
+const isAuthInvalidStatus = (status?: number) => status === 401 || status === 403;
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,7 +48,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (isMounted) {
           setAccessToken(null);
           setApiAccessToken(null);
-          localStorage.removeItem(SESSION_FLAG_KEY);
+
+          // Only clear the persistent session flag when the server explicitly
+          // says the session is unauthorized/invalid.
+          const axiosError = err as AxiosError;
+          if (isAuthInvalidStatus(axiosError.response?.status)) {
+            localStorage.removeItem(SESSION_FLAG_KEY);
+          }
         }
       } finally {
         if (isMounted) {

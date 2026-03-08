@@ -20,6 +20,9 @@ const Navigation: React.FC = () => {
         </Link>
 
         <div className={styles.links}>
+          <Link to="/discover" className={styles.link}>
+            Discover
+          </Link>
           {userId && (
             <Link to={`/profile/${userId}`} className={styles.link}>
               My Profile

@@ -11,6 +11,7 @@ import userRoutes from "./routes/user_routes";
 import authRoutes from "./routes/auth_routes";
 import postRoutes from "./routes/post_routes";
 import commentRoutes from "./routes/comment_routes";
+import searchRoutes from "./routes/search_routes";
 
 
 const app: Express = express();
@@ -61,6 +62,7 @@ app.use("/user", userRoutes);
 app.use("/auth", authRoutes);
 app.use("/post", postRoutes);
 app.use("/comment", commentRoutes);
+app.use("/api/search", searchRoutes);
 
 // Database Connection
 const db = mongoose.connection;

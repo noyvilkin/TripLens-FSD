@@ -6,6 +6,7 @@ import LoadingScreen from './components/LoadingScreen';
 import ProfilePage from './components/ProfilePage';
 import Navigation from './components/Navigation';
 import PostCreatePage from './components/PostCreatePage';
+import DiscoverPage from './components/DiscoverPage';
 
 function App() {
   const { accessToken, loading } = useAuth();
@@ -38,12 +39,19 @@ function App() {
           path="/" 
           element={
             <ProtectedRoute>
-              <div style={{ padding: '2rem', textAlign: 'center' }}>
-                <h1>Welcome to the Trip Feed!</h1>
-                <p>Navigate to your profile using the navigation bar above.</p>
-              </div>
+              <DiscoverPage />
             </ProtectedRoute>
           } 
+        />
+
+        {/* Discover / Smart Search Route */}
+        <Route
+          path="/discover"
+          element={
+            <ProtectedRoute>
+              <DiscoverPage />
+            </ProtectedRoute>
+          }
         />
 
         {/* Profile Page Route */}

@@ -1,13 +1,19 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-let cachedModel: ReturnType<GoogleGenerativeAI["getGenerativeModel"]> | null = null;
+let cachedEmbeddingModel: ReturnType<GoogleGenerativeAI["getGenerativeModel"]> | null = null;
+let cachedGenAI: GoogleGenerativeAI | null = null;
+
+const getGenAI = (): GoogleGenerativeAI => {
+    if (cachedGenAI) return cachedGenAI;
+    const apiKey = process.env.GEMINI_API_KEY || "";
+    cachedGenAI = new GoogleGenerativeAI(apiKey);
+    return cachedGenAI;
+};
 
 const getEmbeddingModel = () => {
-    if (cachedModel) return cachedModel;
-    const apiKey = process.env.GEMINI_API_KEY || "";
-    const genAI = new GoogleGenerativeAI(apiKey);
-    cachedModel = genAI.getGenerativeModel({ model: "gemini-embedding-001" });
-    return cachedModel;
+    if (cachedEmbeddingModel) return cachedEmbeddingModel;
+    cachedEmbeddingModel = getGenAI().getGenerativeModel({ model: "gemini-embedding-001" });
+    return cachedEmbeddingModel;
 };
 
 export const generateEmbeddings = async (text: string): Promise<number[]> => {
@@ -51,7 +57,7 @@ export const generateEmbeddings = async (text: string): Promise<number[]> => {
     }
 };
 
-// Helper for Smart Search: Calculate similarity locally since using Local MongoDB
+// Helper for Smart Search: Calculate similarity locally as fallback
 export const cosineSimilarity = (vecA: number[], vecB: number[]): number => {
     if (!vecA.length || !vecB.length) return 0;
 
@@ -70,4 +76,39 @@ export const cosineSimilarity = (vecA: number[], vecB: number[]): number => {
 
     if (magA === 0 || magB === 0) return 0;
     return dotProduct / (Math.sqrt(magA) * Math.sqrt(magB));
+};
+
+const RAG_SYSTEM_PROMPT =
+    "You are a helpful travel assistant. Use the provided trip context to answer the user's question accurately. " +
+    "If the context doesn't contain the answer, say you don't know based on current listings.";
+
+export const generateRAGAnswer = async (
+    query: string,
+    tripContexts: string[]
+): Promise<string> => {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey || !apiKey.trim()) {
+        throw new Error("GEMINI_API_KEY is not configured");
+    }
+
+    const model = getGenAI().getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    const contextBlock = tripContexts
+        .map((ctx, i) => `--- Trip ${i + 1} ---\n${ctx}`)
+        .join("\n\n");
+
+    const result = await model.generateContent({
+        contents: [
+            {
+                role: "user",
+                parts: [
+                    {
+                        text: `${RAG_SYSTEM_PROMPT}\n\nTrip Context:\n${contextBlock}\n\nUser Question: ${query}`,
+                    },
+                ],
+            },
+        ],
+    });
+
+    return result.response.text();
 };

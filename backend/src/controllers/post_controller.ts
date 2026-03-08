@@ -25,8 +25,9 @@ class PostController extends BaseController<IPost> {
                 req.body.content = description;
             }
 
-            if (req.body.content) {
-                const vector = await generateEmbeddings(req.body.content);
+            if (req.body.content || req.body.title) {
+                const textToEmbed = [req.body.title, req.body.content].filter(Boolean).join(" - ");
+                const vector = await generateEmbeddings(textToEmbed);
                 req.body.vector = vector;
             }
 
@@ -54,7 +55,7 @@ class PostController extends BaseController<IPost> {
                 req.body.content = description;
             }
 
-            const textToEmbed = req.body.content || description;
+            const textToEmbed = [req.body.title, req.body.content || description].filter(Boolean).join(" - ");
             const vector = textToEmbed ? await generateEmbeddings(textToEmbed) : [];
             
             // Add the sender ID from the authenticated user

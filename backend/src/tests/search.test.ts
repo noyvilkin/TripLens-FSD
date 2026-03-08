@@ -107,6 +107,8 @@ describe("Smart Search", () => {
                 images: ["/uploads/eilat.jpg"],
                 userId: "user1",
                 vector: [1, 0],
+                likes: [],
+                comments: [],
             },
             {
                 _id: "id2",
@@ -115,6 +117,8 @@ describe("Smart Search", () => {
                 images: ["/uploads/tlv.jpg"],
                 userId: "user2",
                 vector: [0.9, 0.1],
+                likes: [],
+                comments: [],
             },
             {
                 _id: "id3",
@@ -123,6 +127,8 @@ describe("Smart Search", () => {
                 images: ["/uploads/deadsea.jpg"],
                 userId: "user1",
                 vector: [0.8, 0.2],
+                likes: [],
+                comments: [],
             },
         ];
 

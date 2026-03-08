@@ -68,3 +68,13 @@ export const deletePost = async (
     }
   });
 };
+
+export const toggleLike = async (postId: string): Promise<Post> => {
+  const response = await api.patch<Post>(`/post/${postId}/like`);
+  return response.data;
+};
+
+export const addComment = async (postId: string, text: string): Promise<Post> => {
+  const response = await api.post<Post>(`/post/${postId}/comment`, { text });
+  return response.data;
+};

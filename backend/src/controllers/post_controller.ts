@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import BaseController from "./base_controller";
 import PostModel, { IPost } from "../models/post_model";
+import UserModel from "../models/user_model";
 import { generateEmbeddings, cosineSimilarity } from "../services/ai_service";
 
 declare global {
@@ -16,6 +17,8 @@ class PostController extends BaseController<IPost> {
         super(PostModel);
         this.post = this.post.bind(this);
         this.smartSearch = this.smartSearch.bind(this);
+        this.toggleLike = this.toggleLike.bind(this);
+        this.addComment = this.addComment.bind(this);
     }
 
     async updateItem(req: Request, res: Response): Promise<void> {
@@ -124,6 +127,77 @@ class PostController extends BaseController<IPost> {
             res.status(200).send(rankedPosts);
         } catch (error) {
             res.status(500).send("AI Search failed. Please check your API key.");
+        }
+    }
+
+    async toggleLike(req: Request, res: Response): Promise<void> {
+        try {
+            const postId = req.params.id;
+            const userId = (req as any).userId || req.user?._id;
+            if (!userId) {
+                res.status(401).json({ error: "User ID is required" });
+                return;
+            }
+
+            const post = await this.model.findById(postId);
+            if (!post) {
+                res.status(404).json({ error: "Post not found" });
+                return;
+            }
+
+            const alreadyLiked = post.likes.includes(userId);
+            const update = alreadyLiked
+                ? { $pull: { likes: userId } }
+                : { $addToSet: { likes: userId } };
+
+            const updated = await this.model.findByIdAndUpdate(postId, update, { new: true })
+                .populate("userId", "username profilePic");
+
+            if (updated) res.status(200).json(updated);
+            else res.status(404).json({ error: "Post not found" });
+        } catch (error) {
+            res.status(400).json({ error: (error as Error).message });
+        }
+    }
+
+    async addComment(req: Request, res: Response): Promise<void> {
+        try {
+            const postId = req.params.id;
+            const userId = (req as any).userId || req.user?._id;
+            if (!userId) {
+                res.status(401).json({ error: "User ID is required" });
+                return;
+            }
+
+            const { text } = req.body;
+            if (!text || typeof text !== "string" || text.trim().length === 0) {
+                res.status(400).json({ error: "Comment text cannot be empty" });
+                return;
+            }
+
+            const user = await UserModel.findById(userId);
+            if (!user) {
+                res.status(404).json({ error: "User not found" });
+                return;
+            }
+
+            const comment = {
+                userId,
+                username: user.username,
+                text: text.trim(),
+                createdAt: new Date()
+            };
+
+            const updated = await this.model.findByIdAndUpdate(
+                postId,
+                { $push: { comments: comment } },
+                { new: true }
+            ).populate("userId", "username profilePic");
+
+            if (updated) res.status(201).json(updated);
+            else res.status(404).json({ error: "Post not found" });
+        } catch (error) {
+            res.status(400).json({ error: (error as Error).message });
         }
     }
 

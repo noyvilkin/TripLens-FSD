@@ -1,5 +1,17 @@
 import api from './axios';
-import type { Post } from '../types/user';
+import type { Post, PaginatedPostsResponse } from '../types/user';
+
+export const getPosts = async (
+  page: number = 1,
+  limit: number = 10,
+  signal?: AbortSignal
+): Promise<PaginatedPostsResponse> => {
+  const response = await api.get<PaginatedPostsResponse>('/post', {
+    params: { page, limit },
+    signal,
+  });
+  return response.data;
+};
 
 export interface CreatePostPayload {
   title: string;

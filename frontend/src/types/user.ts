@@ -8,15 +8,29 @@ export interface UserProfile {
   createdAt: string;
 }
 
+// Populated author info (from .populate('userId'))
+export interface PostAuthor {
+  _id: string;
+  username: string;
+  profilePic?: string;
+}
+
 // Post data
 export interface Post {
   _id: string;
   title: string;
   content: string;
   images: string[];
-  userId: string;
+  userId: string | PostAuthor;
   createdAt?: string;
   updatedAt?: string;
+}
+
+// Paginated response from GET /post
+export interface PaginatedPostsResponse {
+  posts: Post[];
+  totalPages: number;
+  currentPage: number;
 }
 
 // Zod schema for username validation

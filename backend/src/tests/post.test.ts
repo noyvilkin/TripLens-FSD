@@ -203,9 +203,10 @@ describe("Post Tests", () => {
                 .get("/post");
 
             expect(response.status).toBe(200);
-            expect(Array.isArray(response.body)).toBe(true);
-            expect(response.body.length).toBe(1);
-            expect(response.body[0].title).toBe(testPost.title);
+            expect(response.body).toHaveProperty("posts");
+            expect(Array.isArray(response.body.posts)).toBe(true);
+            expect(response.body.posts.length).toBe(1);
+            expect(response.body.posts[0].title).toBe(testPost.title);
         });
 
         test("Should get posts filtered by userId", async () => {
@@ -229,17 +230,18 @@ describe("Post Tests", () => {
                 .get(`/post?userId=${userId}`);
 
             expect(response.status).toBe(200);
-            expect(response.body.length).toBe(1);
-            expect(response.body[0].title).toBe("User 1 Post");
+            expect(response.body.posts.length).toBe(1);
+            expect(response.body.posts[0].title).toBe("User 1 Post");
         });
 
-        test("Should return empty array when no posts exist", async () => {
+        test("Should return empty posts array when no posts exist", async () => {
             const response = await request(app)
                 .get("/post");
 
             expect(response.status).toBe(200);
-            expect(Array.isArray(response.body)).toBe(true);
-            expect(response.body.length).toBe(0);
+            expect(response.body).toHaveProperty("posts");
+            expect(Array.isArray(response.body.posts)).toBe(true);
+            expect(response.body.posts.length).toBe(0);
         });
     });
 
@@ -449,6 +451,116 @@ describe("Post Tests", () => {
         });
     });
 
+    // ==================== PAGINATION TESTS ====================
+
+    describe("GET /post (Pagination)", () => {
+        test("Should return paginated response with correct shape", async () => {
+            await createPostRequest(accessToken);
+
+            const response = await request(app).get("/post");
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveProperty("posts");
+            expect(response.body).toHaveProperty("totalPages");
+            expect(response.body).toHaveProperty("currentPage");
+            expect(Array.isArray(response.body.posts)).toBe(true);
+        });
+
+        test("Should default to page 1 when not provided", async () => {
+            await createPostRequest(accessToken);
+
+            const response = await request(app).get("/post");
+
+            expect(response.body.currentPage).toBe(1);
+        });
+
+        test("Should paginate results correctly across pages", async () => {
+            for (let i = 0; i < 15; i++) {
+                await createPostRequest(accessToken, {
+                    title: `Post ${i}`,
+                    content: `Content ${i}`
+                });
+            }
+
+            const page1 = await request(app).get("/post?page=1&limit=10");
+            expect(page1.status).toBe(200);
+            expect(page1.body.posts.length).toBe(10);
+            expect(page1.body.totalPages).toBe(2);
+            expect(page1.body.currentPage).toBe(1);
+
+            const page2 = await request(app).get("/post?page=2&limit=10");
+            expect(page2.status).toBe(200);
+            expect(page2.body.posts.length).toBe(5);
+            expect(page2.body.totalPages).toBe(2);
+            expect(page2.body.currentPage).toBe(2);
+        });
+
+        test("Should calculate skip correctly as (page-1)*limit", async () => {
+            for (let i = 0; i < 5; i++) {
+                await createPostRequest(accessToken, {
+                    title: `Post ${i}`,
+                    content: `Content ${i}`
+                });
+            }
+
+            const res = await request(app).get("/post?page=2&limit=2");
+            expect(res.body.posts.length).toBe(2);
+            expect(res.body.currentPage).toBe(2);
+            expect(res.body.totalPages).toBe(3); // ceil(5/2) = 3
+        });
+
+        test("Should return posts sorted by createdAt descending (newest first)", async () => {
+            await createPostRequest(accessToken, { title: "Oldest Post", content: "old content" });
+            await createPostRequest(accessToken, { title: "Newest Post", content: "new content" });
+
+            const res = await request(app).get("/post?page=1&limit=10");
+            expect(res.body.posts[0].title).toBe("Newest Post");
+            expect(res.body.posts[1].title).toBe("Oldest Post");
+        });
+
+        test("Should respect userId filter with pagination", async () => {
+            for (let i = 0; i < 3; i++) {
+                await createPostRequest(accessToken, {
+                    title: `User1 Post ${i}`,
+                    content: `Content ${i}`
+                });
+            }
+            await createPostRequest(accessToken2, {
+                title: "User2 Post",
+                content: "Other user"
+            });
+
+            const res = await request(app).get(`/post?userId=${userId}&page=1&limit=10`);
+            expect(res.body.posts.length).toBe(3);
+            expect(res.body.totalPages).toBe(1);
+            res.body.posts.forEach((p: { title: string }) => {
+                expect(p.title).toContain("User1");
+            });
+        });
+
+        test("Should return empty posts array for a page beyond total", async () => {
+            await createPostRequest(accessToken);
+
+            const res = await request(app).get("/post?page=99&limit=10");
+            expect(res.status).toBe(200);
+            expect(res.body.posts.length).toBe(0);
+            expect(res.body.currentPage).toBe(99);
+        });
+
+        test("Should clamp limit to max 50", async () => {
+            for (let i = 0; i < 5; i++) {
+                await createPostRequest(accessToken, {
+                    title: `Post ${i}`,
+                    content: `Content ${i}`
+                });
+            }
+
+            const res = await request(app).get("/post?page=1&limit=999");
+            expect(res.body.posts.length).toBe(5);
+            expect(res.body.totalPages).toBe(1);
+        });
+    });
+
     // ==================== INTEGRATION TESTS ====================
 
     describe("Integration: Post Workflow", () => {
@@ -510,7 +622,7 @@ describe("Post Tests", () => {
                 .get(`/post?userId=${userId}`);
 
             expect(response.status).toBe(200);
-            expect(response.body.length).toBe(3);
+            expect(response.body.posts.length).toBe(3);
         });
     });
 

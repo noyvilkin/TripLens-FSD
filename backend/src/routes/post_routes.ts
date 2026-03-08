@@ -1,9 +1,24 @@
-import express, { Router } from "express";
+import express, { Router, Request, Response, NextFunction } from "express";
 import postController from "../controllers/post_controller";
 import authMiddleware from "../middleware/auth_middleware";
 import uploadPostImages from "../config/post_multer_config";
 
 const router: Router = express.Router();
+
+const handleUpload = (req: Request, res: Response, next: NextFunction) => {
+    uploadPostImages.array("images", 6)(req, res, (err: any) => {
+        if (!err) return next();
+        if (err.code === "LIMIT_FILE_SIZE") {
+            res.status(400).json({ error: "File too large. Max 5MB per image." });
+            return;
+        }
+        if (err.code === "LIMIT_FILE_COUNT" || err.code === "LIMIT_UNEXPECTED_FILE") {
+            res.status(400).json({ error: "Too many files. Max 6 images allowed." });
+            return;
+        }
+        res.status(500).json({ error: "Upload failed: " + err.message });
+    });
+};
 
 /**
  * @swagger
@@ -51,7 +66,7 @@ const router: Router = express.Router();
  *     security:
  *       - bearerAuth: []
  */
-router.post("/", authMiddleware, uploadPostImages.array("images", 6), postController.post);
+router.post("/", authMiddleware, handleUpload, postController.post);
 
 /**
  * @swagger

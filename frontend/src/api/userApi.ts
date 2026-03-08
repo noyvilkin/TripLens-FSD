@@ -1,5 +1,5 @@
 import api, { unwrap } from './axios';
-import type { UserProfile, Post } from '../types/user';
+import type { UserProfile, Post, PaginatedPostsResponse } from '../types/user';
 
 // Get user public profile
 export const getUserProfile = async (userId: string, signal?: AbortSignal): Promise<UserProfile> => {
@@ -7,10 +7,13 @@ export const getUserProfile = async (userId: string, signal?: AbortSignal): Prom
   return unwrap(response);
 };
 
-// Get user's posts
+// Get user's posts (paginated — returns all pages flattened for profile view)
 export const getUserPosts = async (userId: string, signal?: AbortSignal): Promise<Post[]> => {
-  const response = await api.get<Post[]>('/post', { params: { userId }, signal });
-  return unwrap(response);
+  const response = await api.get<PaginatedPostsResponse>('/post', {
+    params: { userId, limit: 50 },
+    signal,
+  });
+  return response.data.posts;
 };
 
 // Update user profile (with optional image)

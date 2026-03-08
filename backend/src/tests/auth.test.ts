@@ -233,9 +233,10 @@ describe("Authentication Flow Tests", () => {
             expect(response.body).toHaveProperty("error", "No refresh token");
         });
 
-        test("Should reject reused/unknown refresh token and clear stored tokens", async () => {
+        test("Should reject reused/unknown refresh token without clearing stored tokens", async () => {
             await request(app).post("/auth/register").send(testUser);
             const user = await UserModel.findOne({ email: testUser.email });
+            const originalTokenCount = user?.refreshToken.length ?? 0;
             const refreshSecret = process.env.JWT_REFRESH_SECRET as string;
             const forgedToken = jwt.sign({ userId: user!._id.toString(), tokenId: "forged" }, refreshSecret, { expiresIn: "7d" });
 
@@ -246,7 +247,7 @@ describe("Authentication Flow Tests", () => {
 
             expect(response.status).toBe(401);
             const updatedUser = await UserModel.findOne({ email: testUser.email });
-            expect(updatedUser?.refreshToken.length).toBe(0);
+            expect(updatedUser?.refreshToken.length).toBe(originalTokenCount);
         });
 
         test("Should return session expired on invalid token signature", async () => {

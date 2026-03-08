@@ -60,6 +60,8 @@ const isAuthEndpoint = (url?: string) => {
   );
 };
 
+const isAuthInvalidStatus = (status?: number) => status === 401 || status === 403;
+
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (accessToken && !config.headers?.Authorization) {
     config.headers.Authorization = `Bearer ${accessToken}`;
@@ -109,8 +111,14 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return api(originalRequest);
       } catch (refreshError) {
-        setAccessToken(null);
-        processQueue(refreshError as AxiosError, null);
+        const axiosRefreshError = refreshError as AxiosError;
+
+        // Keep token during transient failures; clear only on explicit auth invalidation.
+        if (isAuthInvalidStatus(axiosRefreshError.response?.status)) {
+          setAccessToken(null);
+        }
+
+        processQueue(axiosRefreshError, null);
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

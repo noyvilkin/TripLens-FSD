@@ -111,8 +111,8 @@ router.post("/login", authController.login.bind(authController));
  *       Exchange a valid refresh token for new access and refresh tokens.
  *       The old refresh token is invalidated after use (token rotation).
  *       
- *       **Security Note**: If an invalid or already-used refresh token is detected,
- *       all refresh tokens for that user are invalidated as a security measure.
+ *       **Security Note**: Invalid or already-used refresh tokens are rejected with 401,
+ *       and only a valid presented token is rotated.
  *     tags: [Auth]
  *     requestBody:
  *       required: true

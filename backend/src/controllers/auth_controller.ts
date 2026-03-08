@@ -157,10 +157,6 @@ class AuthController {
             const user = await UserModel.findById(decoded.userId);
 
             if (!user || !user.refreshToken.includes(tokenFromCookie)) {
-                if (user) {
-                    user.refreshToken = [];
-                    await user.save();
-                }
                 return sendError(res, "Invalid token", 401);
             }
 

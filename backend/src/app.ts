@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import "dotenv/config";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import compression from "compression";
 import path from "path";
 import fs from "fs";
 import swaggerUi from "swagger-ui-express";
@@ -13,8 +14,13 @@ import postRoutes from "./routes/post_routes";
 import commentRoutes from "./routes/comment_routes";
 import searchRoutes from "./routes/search_routes";
 
+const isProduction = process.env.NODE_ENV === "production";
 
 const app: Express = express();
+
+if (isProduction) {
+  app.use(compression());
+}
 
 // Middleware
 const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173')
@@ -24,7 +30,8 @@ const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173')
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true); // allow non-browser clients
+    if (!origin) return callback(null, true);
+    if (isProduction) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
     return callback(new Error('Not allowed by CORS'));
   },
@@ -33,9 +40,9 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.options(/.*/, cors());
-app.use(express.json()); // To parse JSON bodies
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser()); // To read refresh tokens from cookies
+app.use(cookieParser());
 
 // Serve static files (uploaded images) with error handling for missing files
 app.use('/uploads', (req: Request, res: Response, next: NextFunction) => {
@@ -63,6 +70,15 @@ app.use("/auth", authRoutes);
 app.use("/post", postRoutes);
 app.use("/comment", commentRoutes);
 app.use("/api/search", searchRoutes);
+
+if (isProduction) {
+  const clientDistPath = path.resolve(__dirname, "../../frontend/dist");
+  app.use(express.static(clientDistPath));
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.method !== "GET") return next();
+    res.sendFile(path.join(clientDistPath, "index.html"));
+  });
+}
 
 // Database Connection
 const db = mongoose.connection;

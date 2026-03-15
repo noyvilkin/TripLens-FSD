@@ -427,7 +427,7 @@
 
 .postActions {
   position: absolute;
-  top: 12px;
+  bottom: 12px;
   right: 12px;
   display: flex;
   gap: 0.4rem;

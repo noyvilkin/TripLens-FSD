@@ -44,32 +44,9 @@ else
     exit 1
 fi
 
-# Step 2: Install backend dependencies
+# Step 2: Install frontend dependencies
 echo ""
-echo "Step 2: Installing backend dependencies..."
-cd backend
-if npm install; then
-    print_success "Backend dependencies installed"
-else
-    print_error "Backend dependency installation failed"
-    exit 1
-fi
-
-# Step 3: Build backend
-echo ""
-echo "Step 3: Building backend..."
-if npm run build; then
-    print_success "Backend build completed"
-else
-    print_error "Backend build failed"
-    exit 1
-fi
-
-cd ..
-
-# Step 4: Install frontend dependencies
-echo ""
-echo "Step 4: Installing frontend dependencies..."
+echo "Step 2: Installing frontend dependencies..."
 cd frontend
 if npm install; then
     print_success "Frontend dependencies installed"
@@ -78,11 +55,11 @@ else
     exit 1
 fi
 
-# Step 5: Build frontend
+# Step 3: Build frontend (static assets served by backend in production)
 echo ""
-echo "Step 5: Building frontend..."
+echo "Step 3: Building frontend..."
 if npm run build; then
-    print_success "Frontend build completed"
+    print_success "Frontend build completed (output: frontend/dist/)"
 else
     print_error "Frontend build failed"
     exit 1
@@ -90,15 +67,35 @@ fi
 
 cd ..
 
-# Step 6: Restart backend with PM2
+# Step 4: Install backend dependencies
 echo ""
-echo "Step 6: Restarting backend application with PM2..."
+echo "Step 4: Installing backend dependencies..."
 cd backend
-if pm2 restart triplens-backend 2>/dev/null; then
+if npm install; then
+    print_success "Backend dependencies installed"
+else
+    print_error "Backend dependency installation failed"
+    exit 1
+fi
+
+# Step 5: Build backend
+echo ""
+echo "Step 5: Building backend..."
+if npm run build; then
+    print_success "Backend build completed"
+else
+    print_error "Backend build failed"
+    exit 1
+fi
+
+# Step 6: Restart backend with PM2 in production mode
+echo ""
+echo "Step 6: Restarting backend application with PM2 (production)..."
+if pm2 restart triplens-backend --env production 2>/dev/null; then
     print_success "Backend application restarted"
 else
     print_warning "Backend not running, starting new instance..."
-    if pm2 start ecosystem.config.js; then
+    if pm2 start ecosystem.config.js --env production; then
         print_success "Backend application started"
     else
         print_error "Failed to start backend application"

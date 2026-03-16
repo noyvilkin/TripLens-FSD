@@ -71,14 +71,12 @@ app.use("/post", postRoutes);
 app.use("/comment", commentRoutes);
 app.use("/api/search", searchRoutes);
 
-if (isProduction) {
-  const clientDistPath = path.resolve(__dirname, "../../frontend/dist");
-  app.use(express.static(clientDistPath));
-  app.use((req: Request, res: Response, next: NextFunction) => {
-    if (req.method !== "GET") return next();
-    res.sendFile(path.join(clientDistPath, "index.html"));
-  });
-}
+const clientDistPath = path.resolve(__dirname, "../../frontend/dist");
+app.use(express.static(clientDistPath));
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.method !== "GET") return next();
+  res.sendFile(path.join(clientDistPath, "index.html"));
+});
 
 // Database Connection
 const db = mongoose.connection;

@@ -5,7 +5,7 @@ import type { Post, PostAuthor } from '../types/user';
 import PostDetail from './PostDetail';
 import styles from './TripFeed.module.css';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 const DEFAULT_AVATAR = '/user.png';
 
 const getAuthor = (userId: string | PostAuthor): PostAuthor | null => {

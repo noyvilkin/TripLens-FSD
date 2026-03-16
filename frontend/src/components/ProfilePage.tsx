@@ -322,7 +322,7 @@ const ProfilePage: React.FC = () => {
       return defaultProfileImage; // Use our custom user.png instead of the default SVG
     }
     // If it's a relative path, prepend the API URL
-    return `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${profile.profilePic}`;
+    return `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}${profile.profilePic}`;
   })();
 
   // Safe date formatting
@@ -465,7 +465,7 @@ const ProfilePage: React.FC = () => {
                     {post.images.slice(0, 4).map((image) => (
                       <img
                         key={image}
-                        src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${image}`}
+                        src={`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}${image}`}
                         alt={post.title}
                         className={styles.postImage}
                       />
@@ -529,11 +529,11 @@ const ProfilePage: React.FC = () => {
                   ‹
                 </button>
                 <img
-                  src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${selectedPost.images[activeImageIndex]}`}
+                  src={`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}${selectedPost.images[activeImageIndex]}`}
                   alt={selectedPost.title}
                   className={styles.modalImage}
                   onClick={() =>
-                    setFullImageUrl(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${selectedPost.images[activeImageIndex]}`)
+                    setFullImageUrl(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}${selectedPost.images[activeImageIndex]}`)
                   }
                 />
                 <button

@@ -2,7 +2,7 @@
 
 ## Running in Production
 
-In production the Express backend serves the compiled React frontend on a single port (default `5000`).
+In production the Express backend serves the compiled React frontend on a single port (default `4000`).
 
 ### Prerequisites
 
@@ -26,7 +26,7 @@ cd ../backend && npm run build
 NODE_ENV=production node dist/server.js
 ```
 
-The app is now available at `http://localhost:5000`.
+The app is now available at `http://localhost:4000`.
 
 ### How it works
 

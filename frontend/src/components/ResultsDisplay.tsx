@@ -31,7 +31,7 @@ const useTypewriter = (text: string): string => {
 
 const getImageUrl = (imagePath: string): string => {
   if (imagePath.startsWith("http")) return imagePath;
-  const base = import.meta.env.VITE_API_URL || "http://localhost:4000";
+  const base = import.meta.env.VITE_API_URL || "";
   return `${base}${imagePath}`;
 };
 

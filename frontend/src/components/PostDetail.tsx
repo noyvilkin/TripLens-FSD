@@ -6,7 +6,7 @@ import { decodeToken } from '../utils/jwt';
 import type { Post, PostAuthor, PostComment } from '../types/user';
 import styles from './PostDetail.module.css';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const API_URL = import.meta.env.VITE_API_URL || '';
 const DEFAULT_AVATAR = '/user.png';
 
 interface PostDetailProps {

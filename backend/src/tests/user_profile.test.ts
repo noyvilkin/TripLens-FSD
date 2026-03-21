@@ -316,10 +316,10 @@ describe("User Profile & Media Management Tests", () => {
                 .get(`/post?userId=${user1Id}`);
 
             expect(response.status).toBe(200);
-            expect(Array.isArray(response.body)).toBe(true);
-            expect(response.body.length).toBe(2);
-            expect(response.body[0].title).toMatch(/User 1 Post/);
-            expect(response.body[1].title).toMatch(/User 1 Post/);
+            expect(Array.isArray(response.body.posts)).toBe(true);
+            expect(response.body.posts.length).toBe(2);
+            expect(response.body.posts[0].title).toMatch(/User 1 Post/);
+            expect(response.body.posts[1].title).toMatch(/User 1 Post/);
         });
 
         test("Should return empty array for user with no posts", async () => {
@@ -327,8 +327,8 @@ describe("User Profile & Media Management Tests", () => {
                 .get(`/post?userId=${user1Id}`);
 
             expect(response.status).toBe(200);
-            expect(Array.isArray(response.body)).toBe(true);
-            expect(response.body.length).toBe(0);
+            expect(Array.isArray(response.body.posts)).toBe(true);
+            expect(response.body.posts.length).toBe(0);
         });
     });
 
@@ -351,6 +351,26 @@ describe("User Profile & Media Management Tests", () => {
                     fs.unlinkSync(testImagePath);
                 }
             }
+        });
+
+        test("Should reject unexpected upload field name", async () => {
+            const response = await request(app)
+                .put(`/user/${user1Id}`)
+                .set("Authorization", `Bearer ${user1Token}`)
+                .attach("wrongField", Buffer.from("abc"), "img.png");
+
+            expect(response.status).toBe(400);
+            expect(response.text).toContain("Unexpected field");
+        });
+
+        test("Should reject non-image profile upload", async () => {
+            const response = await request(app)
+                .put(`/user/${user1Id}`)
+                .set("Authorization", `Bearer ${user1Token}`)
+                .attach("profileImage", Buffer.from("hello"), "file.txt");
+
+            expect(response.status).toBe(400);
+            expect(response.text).toContain("Invalid file type");
         });
     });
 });

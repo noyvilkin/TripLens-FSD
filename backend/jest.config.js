@@ -12,6 +12,7 @@ module.exports = {
     "src/**/*.ts",
     "!src/**/*.d.ts",
     "!src/server.ts",
+    "!src/seed.ts",
     "!src/tests/**",
   ],
   coverageDirectory: "coverage",

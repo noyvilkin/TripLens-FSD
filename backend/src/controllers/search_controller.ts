@@ -3,6 +3,15 @@ import { generateEmbeddings, generateRAGAnswer, cosineSimilarity } from "../serv
 import PostModel from "../models/post_model";
 import { SmartSearchResponse, Trip } from "../types/trip";
 
+const buildFallbackAnswer = (query: string, sources: Trip[]): string => {
+    const topTitles = sources.slice(0, 3).map((trip) => trip.title).join(", ");
+    return (
+        `AI text generation is temporarily unavailable due to quota limits. ` +
+        `Based on matching trips, you can start with: ${topTitles}. ` +
+        `Try again later for a full AI explanation for: "${query}".`
+    );
+};
+
 const findSimilarTrips = async (queryVector: number[], limit: number = 3): Promise<Trip[]> => {
     const allPosts = await PostModel.find();
 
@@ -59,7 +68,13 @@ export const smartSearch = async (req: Request, res: Response): Promise<void> =>
             (trip) => `Title: ${trip.title}\nContent: ${trip.content}`
         );
 
-        const answer = await generateRAGAnswer(query.trim(), tripContexts);
+        let answer: string;
+        try {
+            answer = await generateRAGAnswer(query.trim(), tripContexts);
+        } catch (ragError) {
+            console.warn("RAG generation failed; returning fallback answer:", ragError);
+            answer = buildFallbackAnswer(query.trim(), sources);
+        }
 
         const sanitizedSources = sources.map(({ vector: _v, ...rest }) => rest);
 

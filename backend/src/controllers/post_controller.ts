@@ -2,7 +2,8 @@ import { Request, Response } from "express";
 import BaseController from "./base_controller";
 import PostModel, { IPost } from "../models/post_model";
 import UserModel from "../models/user_model";
-import { generateEmbeddings, cosineSimilarity } from "../services/ai_service";
+import fs from "fs/promises";
+import { generateEmbeddings, cosineSimilarity, generateImageSemanticContext, ImageEmbeddingInput } from "../services/ai_service";
 
 declare global {
     namespace Express {
@@ -19,6 +20,24 @@ class PostController extends BaseController<IPost> {
         this.smartSearch = this.smartSearch.bind(this);
         this.toggleLike = this.toggleLike.bind(this);
         this.addComment = this.addComment.bind(this);
+    }
+
+    private async buildImageInputs(files: Express.Multer.File[]): Promise<ImageEmbeddingInput[]> {
+        const inputs = await Promise.all(
+            files.slice(0, 3).map(async (file) => {
+                try {
+                    const data = await fs.readFile(file.path);
+                    return {
+                        mimeType: file.mimetype,
+                        data,
+                    } as ImageEmbeddingInput;
+                } catch {
+                    return null;
+                }
+            })
+        );
+
+        return inputs.filter((input): input is ImageEmbeddingInput => input !== null);
     }
 
     async updateItem(req: Request, res: Response): Promise<void> {
@@ -57,9 +76,6 @@ class PostController extends BaseController<IPost> {
             if (!content && description) {
                 req.body.content = description;
             }
-
-            const textToEmbed = [req.body.title, req.body.content || description].filter(Boolean).join(" - ");
-            const vector = textToEmbed ? await generateEmbeddings(textToEmbed) : [];
             
             // Add the sender ID from the authenticated user
             const authUserId = (req as any).userId || req.user?._id;
@@ -75,6 +91,18 @@ class PostController extends BaseController<IPost> {
                 res.status(400).send("At least one image is required");
                 return;
             }
+
+            const imageInputs = await this.buildImageInputs(files || []);
+            const imageContext = await generateImageSemanticContext(imageInputs);
+
+            const textToEmbed = [
+                req.body.title,
+                req.body.content || description,
+                imageContext ? `Image context: ${imageContext}` : "",
+            ]
+                .filter(Boolean)
+                .join(" - ");
+            const vector = textToEmbed ? await generateEmbeddings(textToEmbed) : [];
 
             const item = await this.model.create({
                 title: req.body.title,

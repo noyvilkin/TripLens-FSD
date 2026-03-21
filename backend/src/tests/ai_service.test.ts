@@ -16,6 +16,7 @@ import { generateEmbeddings, cosineSimilarity } from "../services/ai_service";
 describe("AI Service", () => {
     beforeEach(() => {
         embedContentMock.mockReset();
+        process.env.GEMINI_API_KEY = "test-key";
     });
 
     describe("generateEmbeddings", () => {

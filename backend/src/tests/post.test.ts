@@ -6,6 +6,7 @@ import PostModel from "../models/post_model";
 
 jest.mock("../services/ai_service", () => ({
     generateEmbeddings: jest.fn().mockResolvedValue([0.1, 0.2, 0.3]),
+    generateImageSemanticContext: jest.fn().mockResolvedValue("sunny beach, coastal city, outdoor travel"),
     cosineSimilarity: jest.fn().mockReturnValue(0.9)
 }));
 

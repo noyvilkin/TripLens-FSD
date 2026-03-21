@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import bcrypt from "bcrypt";
 import UserModel from "./models/user_model";
 import PostModel from "./models/post_model";
-import { generateEmbeddings } from "./services/ai_service";
+import { generateEmbeddings, generateImageSemanticContext, ImageEmbeddingInput } from "./services/ai_service";
 
 dotenv.config();
 
@@ -54,7 +54,9 @@ const IMAGE_QUERY_BY_TITLE: Record<string, string> = {
     "Surf Week in Portugal": "portugal,surf,beach,waves",
     "Ancient Ruins of Petra": "petra,jordan,ruins,archaeology",
     "City Lights of Hong Kong": "hongkong,skyline,harbor,night",
-    "Winter Weekend in Vienna": "vienna,winter,city,austria"
+    "Winter Weekend in Vienna": "vienna,winter,city,austria",
+    "Sunset at Tel Aviv Beach": "telaviv,israel,beach,sunset,mediterranean",
+    "Hike in Ein Gedi Oasis": "eingedi,israel,desert,oasis,hiking,deadsea"
 };
 
 const buildAvatarUrl = (variant = 1): string => `https://i.pravatar.cc/240?img=${variant}`;
@@ -102,6 +104,67 @@ const buildTravelImagesForPost = async (title: string, variantBase: number): Pro
         buildFallbackImageUrl(`${title}-${variantBase}`),
         buildFallbackImageUrl(`${title}-${variantBase + 1}`)
     ];
+};
+
+let imageVisionCallsUsed = 0;
+const MAX_IMAGE_VISION_CALLS_PER_SEED = Math.max(
+    0,
+    parseInt(process.env.SEED_MAX_IMAGE_VISION_CALLS || "4", 10)
+);
+
+const fallbackImageContextFromTitle = (title: string): string => {
+    const query = IMAGE_QUERY_BY_TITLE[title] ?? "travel,landscape,destination";
+    return query
+        .split(",")
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .join(", ");
+};
+
+const buildImageInputsFromUrls = async (imageUrls: string[]): Promise<ImageEmbeddingInput[]> => {
+    // Keep external API usage controlled during seeding.
+    const selected = imageUrls.slice(0, 1);
+
+    const fetched = await Promise.all(
+        selected.map(async (url) => {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) return null;
+
+                const contentType = response.headers.get("content-type") || "image/jpeg";
+                if (!contentType.startsWith("image/")) return null;
+
+                const buffer = Buffer.from(await response.arrayBuffer());
+                return {
+                    mimeType: contentType.split(";")[0].trim(),
+                    data: buffer,
+                } as ImageEmbeddingInput;
+            } catch {
+                return null;
+            }
+        })
+    );
+
+    return fetched.filter((item): item is ImageEmbeddingInput => item !== null);
+};
+
+const buildImageSemanticSeedContext = async (title: string, imageUrls: string[]): Promise<string> => {
+    const fallbackContext = fallbackImageContextFromTitle(title);
+
+    if (!process.env.GEMINI_API_KEY || !process.env.GEMINI_API_KEY.trim()) {
+        return fallbackContext;
+    }
+
+    if (imageVisionCallsUsed >= MAX_IMAGE_VISION_CALLS_PER_SEED) {
+        return fallbackContext;
+    }
+
+    const imageInputs = await buildImageInputsFromUrls(imageUrls);
+    if (imageInputs.length === 0) return fallbackContext;
+
+    imageVisionCallsUsed += 1;
+    const semanticContext = await generateImageSemanticContext(imageInputs);
+    return semanticContext || fallbackContext;
 };
 
 const seedData = async () => {
@@ -169,7 +232,9 @@ const seedData = async () => {
                 { title: "Alpine Lake Escape", content: "Crystal water, pine air, and a sunrise hike with panoramic peaks. The silence in the mountains was unforgettable." },
                 { title: "Lisbon Tram Mornings", content: "Pastel facades, steep streets, and fresh pastries before hopping tram 28. Every corner looked like a postcard." },
                 { title: "Road Trip Through Patagonia", content: "Windy roads, glaciers, and guanacos by the highway. We drove for hours and never got bored of the scenery." },
-                { title: "Sunrise Over Cappadocia", content: "Hot air balloons floating above fairy chimneys while the sky turned pink. One of the best mornings of my life." }
+                { title: "Sunrise Over Cappadocia", content: "Hot air balloons floating above fairy chimneys while the sky turned pink. One of the best mornings of my life." },
+                { title: "Sunset at Tel Aviv Beach", content: "Golden light on the Mediterranean, beach volleyball, and a lively promenade full of runners and cyclists." },
+                { title: "Hike in Ein Gedi Oasis", content: "Desert cliffs, cool spring pools, and ibex sightings on a trail that overlooks the Dead Sea." }
             ],
             [
                 { title: "Tokyo Street Food Adventure", content: "From ramen to takoyaki, every bite was incredible. The energy in Shibuya at night is unmatched." },
@@ -227,15 +292,26 @@ const seedData = async () => {
             )
         );
 
-        const postsWithVectors = await Promise.all(
-            posts.map(async (post) => ({
+        const postsWithVectors: Array<typeof posts[number] & { vector: number[] }> = [];
+        for (const post of posts) {
+            const imageContext = await buildImageSemanticSeedContext(post.title, post.images);
+            const textForEmbedding = [
+                post.title,
+                post.content,
+                imageContext ? `Image context: ${imageContext}` : ""
+            ]
+                .filter(Boolean)
+                .join(" - ");
+
+            postsWithVectors.push({
                 ...post,
-                vector: await generateEmbeddings(`${post.title} - ${post.content}`)
-            }))
-        );
+                vector: await generateEmbeddings(textForEmbedding)
+            });
+        }
 
         await PostModel.create(postsWithVectors);
         console.log(`Created ${posts.length} posts`);
+        console.log(`Image vision calls used: ${imageVisionCallsUsed}/${MAX_IMAGE_VISION_CALLS_PER_SEED}`);
 
         console.log("\n✅ Seed data created successfully!");
         console.log("\nSample credentials:");

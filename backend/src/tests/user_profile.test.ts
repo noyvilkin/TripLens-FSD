@@ -8,6 +8,7 @@ import fs from "fs";
 
 jest.mock("../services/ai_service", () => ({
     generateEmbeddings: jest.fn().mockResolvedValue([0.1, 0.2, 0.3]),
+    generateImageSemanticContext: jest.fn().mockResolvedValue("travel, people, destination"),
     cosineSimilarity: jest.fn().mockReturnValue(0.9)
 }));
 

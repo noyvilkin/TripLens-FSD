@@ -5,6 +5,7 @@ import styles from "./ResultsDisplay.module.css";
 interface ResultsDisplayProps {
   answer: string;
   sources: Trip[];
+  onOpenTrip: (trip: Trip) => void;
 }
 
 const TYPEWRITER_SPEED = 12;
@@ -35,7 +36,7 @@ const getImageUrl = (imagePath: string): string => {
   return `${base}${imagePath}`;
 };
 
-const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ answer, sources }) => {
+const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ answer, sources, onOpenTrip }) => {
   const typedAnswer = useTypewriter(answer);
 
   return (
@@ -64,7 +65,16 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ answer, sources }) => {
           <h3 className={styles.sourcesTitle}>Source Trips</h3>
           <div className={styles.grid}>
             {sources.map((trip) => (
-              <article key={trip._id} className={styles.tripCard}>
+              <article
+                key={trip._id}
+                className={styles.tripCard}
+                onClick={() => onOpenTrip(trip)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") onOpenTrip(trip);
+                }}
+              >
                 {trip.images?.[0] && (
                   <div className={styles.imageWrapper}>
                     <img

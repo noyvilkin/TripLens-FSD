@@ -18,13 +18,13 @@
 .logo {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #007bff;
+  color: #4f46e5;
   text-decoration: none;
   transition: color 0.3s;
 }
 
 .logo:hover {
-  color: #0056b3;
+  color: #4338ca;
 }
 
 .links {
@@ -41,7 +41,7 @@
 }
 
 .link:hover {
-  color: #007bff;
+  color: #4f46e5;
 }
 
 .logoutButton {

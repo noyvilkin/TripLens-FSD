@@ -1,13 +1,25 @@
 import multer, { StorageEngine, FileFilterCallback } from "multer";
 import path from "path";
+import fs from "fs";
 import { Request } from "express";
 
 // Define upload directory
 const uploadDir = path.join(__dirname, "../../uploads/profiles");
 
+const ensureUploadDirExists = (): void => {
+    if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+    }
+};
+
+// Ensure folder exists at startup (covers fresh deploys)
+ensureUploadDirExists();
+
 // Configure storage
 const storage: StorageEngine = multer.diskStorage({
     destination: (_req: Request, _file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
+        // Re-check at request time in case folder was removed while process is running
+        ensureUploadDirExists();
         cb(null, uploadDir);
     },
     filename: (req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {

@@ -16,6 +16,51 @@ const getEmbeddingModel = () => {
     return cachedEmbeddingModel;
 };
 
+export interface ImageEmbeddingInput {
+    mimeType: string;
+    data: Buffer;
+}
+
+export const generateImageSemanticContext = async (images: ImageEmbeddingInput[]): Promise<string> => {
+    try {
+        if (!images.length) return "";
+
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey || !apiKey.trim()) {
+            return "";
+        }
+
+        const model = getGenAI().getGenerativeModel({ model: "gemini-2.5-flash" });
+        const limitedImages = images.slice(0, 3);
+
+        const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [
+            {
+                text:
+                    "Analyze these trip photos and return concise travel-relevant clues. " +
+                    "Focus on weather, setting, activity, and landscape keywords. " +
+                    "Return one short line with comma-separated tags.",
+            },
+            ...limitedImages.map((image) => ({
+                inlineData: {
+                    mimeType: image.mimeType,
+                    data: image.data.toString("base64"),
+                },
+            })),
+        ];
+
+        const result = await model.generateContent({
+            contents: [{ role: "user", parts }],
+        });
+
+        const text = result.response.text().trim();
+        if (!text) return "";
+        return text.slice(0, 400);
+    } catch (error) {
+        console.error("Image semantic context generation error:", error);
+        return "";
+    }
+};
+
 export const generateEmbeddings = async (text: string): Promise<number[]> => {
     try {
         if (!text || !text.trim()) return [];

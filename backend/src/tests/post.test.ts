@@ -6,6 +6,7 @@ import PostModel from "../models/post_model";
 
 jest.mock("../services/ai_service", () => ({
     generateEmbeddings: jest.fn().mockResolvedValue([0.1, 0.2, 0.3]),
+    generateImageSemanticContext: jest.fn().mockResolvedValue("sunny beach, coastal city, outdoor travel"),
     cosineSimilarity: jest.fn().mockReturnValue(0.9)
 }));
 
@@ -151,6 +152,48 @@ describe("Post Tests", () => {
             expect(response.status).toBe(401);
             expect(response.body).toHaveProperty("error");
             expect(response.body.error).toContain("Invalid token format");
+        });
+
+        test("Should fail when uploading more than 6 images", async () => {
+            const req = request(app)
+                .post("/post")
+                .set("Authorization", `Bearer ${accessToken}`)
+                .field("title", testPost.title)
+                .field("content", testPost.content);
+
+            for (let i = 0; i < 7; i += 1) {
+                req.attach("images", testImageBuffer, `img-${i}.png`);
+            }
+
+            const response = await req;
+            expect(response.status).toBe(400);
+            expect(response.body.error).toContain("Too many files");
+        });
+
+        test("Should fail when uploading image larger than 5MB", async () => {
+            const largeBuffer = Buffer.alloc(6 * 1024 * 1024, "x");
+
+            const response = await request(app)
+                .post("/post")
+                .set("Authorization", `Bearer ${accessToken}`)
+                .field("title", testPost.title)
+                .field("content", testPost.content)
+                .attach("images", largeBuffer, "large.png");
+
+            expect(response.status).toBe(400);
+            expect(response.body.error).toContain("File too large");
+        });
+
+        test("Should fail when uploading invalid image mime type", async () => {
+            const response = await request(app)
+                .post("/post")
+                .set("Authorization", `Bearer ${accessToken}`)
+                .field("title", testPost.title)
+                .field("content", testPost.content)
+                .attach("images", Buffer.from("not-image"), "invalid.txt");
+
+            expect(response.status).toBe(500);
+            expect(response.body.error).toContain("Upload failed");
         });
 
         test("Should fail to create post without title", async () => {

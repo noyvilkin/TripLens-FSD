@@ -8,6 +8,15 @@ import styles from './TripFeed.module.css';
 const API_URL = import.meta.env.VITE_API_URL || '';
 const DEFAULT_AVATAR = '/user.png';
 
+const resolveMediaUrl = (url: string): string => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
+  return `${API_URL}${url}`;
+};
+
+const buildImageFallbackUrl = (seed: string): string =>
+  `https://picsum.photos/seed/${encodeURIComponent(seed)}/1280/840`;
+
 const getAuthor = (userId: string | PostAuthor): PostAuthor | null => {
   if (typeof userId === 'object' && userId !== null) return userId;
   return null;
@@ -15,7 +24,7 @@ const getAuthor = (userId: string | PostAuthor): PostAuthor | null => {
 
 const getAvatarUrl = (author: PostAuthor | null): string => {
   if (!author?.profilePic || author.profilePic.startsWith('data:')) return DEFAULT_AVATAR;
-  return `${API_URL}${author.profilePic}`;
+  return resolveMediaUrl(author.profilePic);
 };
 
 const TripFeed: React.FC = () => {
@@ -161,9 +170,15 @@ const TripFeed: React.FC = () => {
               {post.images.length > 0 && (
                 <div className={styles.imageContainer}>
                   <img
-                    src={`${API_URL}${post.images[imgIdx]}`}
+                    src={resolveMediaUrl(post.images[imgIdx])}
                     alt={post.title}
                     className={styles.image}
+                    onError={(e) => {
+                      const img = e.currentTarget;
+                      if (img.dataset.fallbackApplied === 'true') return;
+                      img.dataset.fallbackApplied = 'true';
+                      img.src = buildImageFallbackUrl(`${post._id}-${imgIdx}`);
+                    }}
                   />
                   {post.images.length > 1 && (
                     <>

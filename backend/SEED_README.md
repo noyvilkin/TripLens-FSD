@@ -11,27 +11,35 @@ npm run seed
 
 ## What Gets Created
 
-### Users (3)
+### Users (6)
 - **alex@example.com** - traveler_alex
 - **sam@example.com** - wanderlust_sam  
 - **jordan@example.com** - explorer_jordan
+- **maya@example.com** - nomad_maya
+- **lee@example.com** - captain_lee
+- **zoe@example.com** - urban_zoe
 
 All users have password: `password123`
 
-### Posts (8)
-Sample travel posts distributed across the users including:
+### Posts (36)
+Sample travel posts distributed across all users, including:
 - Golden Hour in Santorini
-- Kyoto Lantern Walk
-- Alpine Lake Escape
 - Tokyo Street Food Adventure
-- Northern Lights in Iceland
-- Safari in Tanzania
-- Beach Paradise in Maldives
-- Amsterdam Canal Tour
+- Desert Camp in Wadi Rum
+- Sailing the Greek Islands
+- Diving in the Red Sea
+- City Lights of Hong Kong
+
+Each seeded post includes:
+- 2 topic-matched real photo URLs (from Flickr public feed using per-post query tags)
+- AI embedding vector for semantic search
+- realistic travel-oriented title and content
 
 ## Important Notes
 
 ⚠️ **Warning**: This script will DELETE all existing users and posts before creating new ones.
+
+ℹ️ **Image strategy**: Seed images use fully-qualified HTTPS URLs fetched by deterministic per-title query tags (for example "Hiking the Dolomites" -> `dolomites,hiking,mountains,italy`). If a remote image feed fails, a stable fallback image URL is used automatically.
 
 ✅ After seeding, you can:
 1. Login with any of the sample accounts

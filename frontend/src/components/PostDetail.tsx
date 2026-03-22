@@ -9,6 +9,15 @@ import styles from './PostDetail.module.css';
 const API_URL = import.meta.env.VITE_API_URL || '';
 const DEFAULT_AVATAR = '/user.png';
 
+const resolveMediaUrl = (url: string): string => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
+  return `${API_URL}${url}`;
+};
+
+const buildImageFallbackUrl = (seed: string): string =>
+  `https://picsum.photos/seed/${encodeURIComponent(seed)}/1280/840`;
+
 interface PostDetailProps {
   post: Post;
   onClose: () => void;
@@ -22,7 +31,7 @@ const getAuthor = (userId: string | PostAuthor): PostAuthor | null => {
 
 const getAvatarUrl = (author: PostAuthor | null): string => {
   if (!author?.profilePic || author.profilePic.startsWith('data:')) return DEFAULT_AVATAR;
-  return `${API_URL}${author.profilePic}`;
+  return resolveMediaUrl(author.profilePic);
 };
 
 const formatTimestamp = (dateStr: string): string => {
@@ -128,9 +137,15 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onClose, onPostUpdate }) 
               >&#8249;</button>
             )}
             <img
-              src={`${API_URL}${post.images[imageIndex]}`}
+              src={resolveMediaUrl(post.images[imageIndex])}
               alt={post.title}
               className={styles.galleryImage}
+              onError={(e) => {
+                const img = e.currentTarget;
+                if (img.dataset.fallbackApplied === 'true') return;
+                img.dataset.fallbackApplied = 'true';
+                img.src = buildImageFallbackUrl(`${post._id}-${imageIndex}`);
+              }}
             />
             {post.images.length > 1 && (
               <button

@@ -51,7 +51,7 @@ export const smartSearch = async (req: Request, res: Response): Promise<void> =>
             return;
         }
 
-        const sources = await findSimilarTrips(queryVector, 3);
+        const sources = await findSimilarTrips(queryVector, 5);
 
         if (sources.length === 0) {
             const response: SmartSearchResponse = {
@@ -65,7 +65,11 @@ export const smartSearch = async (req: Request, res: Response): Promise<void> =>
         }
 
         const tripContexts = sources.map(
-            (trip) => `Title: ${trip.title}\nContent: ${trip.content}`
+            (trip) =>
+                `Title: ${trip.title}\n` +
+                `Description: ${trip.content}\n` +
+                `Relevance: ${((trip.score ?? 0) * 100).toFixed(0)}% match\n` +
+                `Photos: ${(trip.images?.length ?? 0)} image(s)`
         );
 
         let answer: string;

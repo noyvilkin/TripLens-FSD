@@ -21,6 +21,7 @@ describe("App Behavior", () => {
         jest.resetModules();
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         app = require("../app").default;
+        app.set("env", "test");
     });
 
     afterAll(async () => {

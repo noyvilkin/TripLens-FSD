@@ -12,7 +12,7 @@ const buildFallbackAnswer = (query: string, sources: Trip[]): string => {
     );
 };
 
-const findSimilarTrips = async (queryVector: number[], limit: number = 3): Promise<Trip[]> => {
+const findSimilarTrips = async (queryVector: number[], limit: number = 5): Promise<Trip[]> => {
     const allPosts = await PostModel.find();
 
     return allPosts

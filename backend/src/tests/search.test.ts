@@ -236,5 +236,56 @@ describe("Smart Search", () => {
 
             expect(res.status).toHaveBeenCalledWith(500);
         });
+
+        test("returns fallback answer when RAG generation fails", async () => {
+            embedContentMock.mockResolvedValueOnce({
+                embedding: { values: [1, 0] },
+            });
+            mockFind.mockResolvedValueOnce(toMongooseDocs(sampleTrips));
+            generateContentMock.mockRejectedValueOnce(new Error("quota exceeded"));
+
+            const consoleSpy = jest.spyOn(console, "warn").mockImplementation();
+            const req = createMockReq({ query: "Where is it sunny?" });
+            const res = createMockRes();
+
+            await smartSearch(req, res);
+            consoleSpy.mockRestore();
+
+            expect(res.status).toHaveBeenCalledWith(200);
+            const responseData = (res.json as jest.Mock).mock.calls[0][0];
+            expect(responseData.answer).toContain("AI text generation is temporarily unavailable");
+            expect(responseData.sources).toHaveLength(3);
+            responseData.sources.forEach((s: any) => {
+                expect(s).not.toHaveProperty("vector");
+            });
+        });
+
+        test("returns 500 when database throws in findSimilarTrips", async () => {
+            embedContentMock.mockResolvedValueOnce({
+                embedding: { values: [1, 0] },
+            });
+            mockFind.mockRejectedValueOnce(new Error("DB connection lost"));
+
+            const consoleSpy = jest.spyOn(console, "error").mockImplementation();
+            const req = createMockReq({ query: "test query" });
+            const res = createMockRes();
+
+            await smartSearch(req, res);
+            consoleSpy.mockRestore();
+
+            expect(res.status).toHaveBeenCalledWith(500);
+            expect(res.json).toHaveBeenCalledWith({
+                error: "Smart search failed. Please try again.",
+            });
+        });
+
+        test("returns 400 for non-string query", async () => {
+            const req = createMockReq({ query: 123 });
+            const res = createMockRes();
+
+            await smartSearch(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
     });
 });

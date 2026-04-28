@@ -2,23 +2,31 @@ import { Request, Response } from "express";
 
 const mockFind = jest.fn();
 const mockFindById = jest.fn();
+const mockFindByIdAndUpdate = jest.fn();
 
 jest.mock("../models/post_model", () => ({
     __esModule: true,
     default: {
         find: (...args: unknown[]) => mockFind(...args),
         findById: (...args: unknown[]) => mockFindById(...args),
-        findByIdAndUpdate: jest.fn(),
+        findByIdAndUpdate: (...args: unknown[]) => {
+            const result = mockFindByIdAndUpdate(...args);
+            return {
+                populate: jest.fn().mockResolvedValue(result),
+            };
+        },
         countDocuments: jest.fn(),
         updateOne: jest.fn(),
         create: jest.fn(),
     },
 }));
 
+const mockUserFindById = jest.fn();
+
 jest.mock("../models/user_model", () => ({
     __esModule: true,
     default: {
-        findById: jest.fn(),
+        findById: (...args: unknown[]) => mockUserFindById(...args),
     },
 }));
 
@@ -117,5 +125,98 @@ describe("Post Controller Unit", () => {
 
         expect(res.status).toHaveBeenCalledWith(404);
         expect(res.json).toHaveBeenCalledWith({ error: "Post not found" });
+    });
+
+    test("toggleLike returns 404 when update returns null", async () => {
+        mockFindById.mockResolvedValueOnce({ likes: [] });
+        mockFindByIdAndUpdate.mockReturnValueOnce(null);
+
+        const req = {
+            params: { id: "post1" },
+            user: { _id: "user1" },
+        } as unknown as Request;
+        const res = createMockRes();
+
+        await postController.toggleLike(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(404);
+        expect(res.json).toHaveBeenCalledWith({ error: "Post not found" });
+    });
+
+    test("toggleLike returns 400 on error", async () => {
+        mockFindById.mockRejectedValueOnce(new Error("DB fail"));
+
+        const req = {
+            params: { id: "post1" },
+            user: { _id: "user1" },
+        } as unknown as Request;
+        const res = createMockRes();
+
+        await postController.toggleLike(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith({ error: "DB fail" });
+    });
+
+    test("addComment returns 401 when userId is missing", async () => {
+        const req = {
+            params: { id: "post1" },
+            body: { text: "hello" },
+        } as unknown as Request;
+        const res = createMockRes();
+
+        await postController.addComment(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(401);
+        expect(res.json).toHaveBeenCalledWith({ error: "User ID is required" });
+    });
+
+    test("addComment returns 404 when user not found", async () => {
+        mockUserFindById.mockResolvedValueOnce(null);
+
+        const req = {
+            params: { id: "post1" },
+            body: { text: "hello" },
+            user: { _id: "user1" },
+        } as unknown as Request;
+        const res = createMockRes();
+
+        await postController.addComment(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(404);
+        expect(res.json).toHaveBeenCalledWith({ error: "User not found" });
+    });
+
+    test("addComment returns 404 when post update returns null", async () => {
+        mockUserFindById.mockResolvedValueOnce({ username: "testuser" });
+        mockFindByIdAndUpdate.mockReturnValueOnce(null);
+
+        const req = {
+            params: { id: "post1" },
+            body: { text: "hello" },
+            user: { _id: "user1" },
+        } as unknown as Request;
+        const res = createMockRes();
+
+        await postController.addComment(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(404);
+        expect(res.json).toHaveBeenCalledWith({ error: "Post not found" });
+    });
+
+    test("addComment returns 400 on error", async () => {
+        mockUserFindById.mockRejectedValueOnce(new Error("DB fail"));
+
+        const req = {
+            params: { id: "post1" },
+            body: { text: "hello" },
+            user: { _id: "user1" },
+        } as unknown as Request;
+        const res = createMockRes();
+
+        await postController.addComment(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith({ error: "DB fail" });
     });
 });

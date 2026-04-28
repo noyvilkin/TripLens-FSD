@@ -332,6 +332,53 @@ describe("User Profile & Media Management Tests", () => {
         });
     });
 
+    describe("GET /user - Get All Users", () => {
+        test("Should get all users without email filter", async () => {
+            const response = await request(app).get("/user");
+
+            expect(response.status).toBe(200);
+            expect(Array.isArray(response.body)).toBe(true);
+            expect(response.body.length).toBe(2);
+        });
+
+        test("Should filter users by email", async () => {
+            const response = await request(app)
+                .get(`/user?email=${testUser1.email}`);
+
+            expect(response.status).toBe(200);
+            expect(Array.isArray(response.body)).toBe(true);
+            expect(response.body.length).toBe(1);
+            expect(response.body[0].email).toBe(testUser1.email);
+        });
+
+        test("Should return empty array for non-existent email", async () => {
+            const response = await request(app)
+                .get("/user?email=nonexistent@example.com");
+
+            expect(response.status).toBe(200);
+            expect(response.body).toEqual([]);
+        });
+    });
+
+    describe("GET /user/username/:username - Get User by Username", () => {
+        test("Should find user by username", async () => {
+            const response = await request(app)
+                .get(`/user/username/${testUser1.username}`);
+
+            expect(response.status).toBe(200);
+            expect(response.body.username).toBe(testUser1.username);
+            expect(response.body.email).toBe(testUser1.email);
+        });
+
+        test("Should return 404 for non-existent username", async () => {
+            const response = await request(app)
+                .get("/user/username/nonexistentuser");
+
+            expect(response.status).toBe(404);
+            expect(response.text).toBe("User not found");
+        });
+    });
+
     describe("File Upload Validation", () => {
         test("Should reject file larger than 5MB", async () => {
             const testImagePath = path.join(__dirname, "large-image.png");
@@ -371,6 +418,35 @@ describe("User Profile & Media Management Tests", () => {
 
             expect(response.status).toBe(400);
             expect(response.text).toContain("Invalid file type");
+        });
+    });
+
+    describe("PUT /user/:userId - Photo Removal", () => {
+        test("Should remove profile photo when profileImage is empty string", async () => {
+            const response = await request(app)
+                .put(`/user/${user1Id}`)
+                .set("Authorization", `Bearer ${user1Token}`)
+                .field("profileImage", "");
+
+            expect(response.status).toBe(200);
+            expect(response.body.profilePic).toBe("");
+        });
+    });
+
+    describe("Base Controller Error Handling", () => {
+        test("Should return 400 for invalid ID on updateItem", async () => {
+            const response = await request(app)
+                .put("/user/old/invalid-id")
+                .send({ username: "newname" });
+
+            expect(response.status).toBe(400);
+        });
+
+        test("Should return 400 for invalid ID on deleteItem", async () => {
+            const response = await request(app)
+                .delete("/user/invalid-id");
+
+            expect(response.status).toBe(400);
         });
     });
 });

@@ -183,6 +183,39 @@ describe("Authentication Flow Tests", () => {
             findSpy.mockRestore();
         });
 
+        test("Should reject login for user without password (Google-only user)", async () => {
+            await UserModel.create({
+                username: "googleonly",
+                email: "googleonly@test.com",
+                refreshToken: []
+            });
+
+            const response = await request(app)
+                .post("/auth/login")
+                .send({ email: "googleonly@test.com", password: "anypassword" });
+
+            expect(response.status).toBe(401);
+            expect(response.body).toHaveProperty("error", "Invalid credentials");
+        });
+
+        test("Should reject login for non-existent user", async () => {
+            const response = await request(app)
+                .post("/auth/login")
+                .send({ email: "nobody@test.com", password: "anypassword" });
+
+            expect(response.status).toBe(401);
+            expect(response.body).toHaveProperty("error", "Invalid credentials");
+        });
+
+        test("Should reject login with missing fields", async () => {
+            const response = await request(app)
+                .post("/auth/login")
+                .send({ email: "test@test.com" });
+
+            expect(response.status).toBe(400);
+            expect(response.body).toHaveProperty("error", "Email and password are required");
+        });
+
         test("Should set secure cookie on login in production", async () => {
             const originalEnv = process.env.NODE_ENV;
             process.env.NODE_ENV = "production";
@@ -436,6 +469,24 @@ describe("Authentication Flow Tests", () => {
                 expect(cookies![0]).toContain("Secure");
             } finally {
                 process.env.NODE_ENV = originalEnv;
+            }
+        });
+
+        test("Should return 500 when GOOGLE_CLIENT_ID is not configured", async () => {
+            const original = process.env.GOOGLE_CLIENT_ID;
+            delete process.env.GOOGLE_CLIENT_ID;
+
+            try {
+                const response = await request(app)
+                    .post(googlePath)
+                    .send({ credential: "some-token" });
+
+                expect(response.status).toBe(500);
+                expect(response.body).toHaveProperty("error", "Server configuration error");
+            } finally {
+                if (original !== undefined) {
+                    process.env.GOOGLE_CLIENT_ID = original;
+                }
             }
         });
 

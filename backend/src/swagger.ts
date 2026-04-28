@@ -71,6 +71,59 @@ A comprehensive REST API for managing posts, comments, users, and authentication
                     },
                     required: ["username", "email", "password"]
                 },
+                UserResponse: {
+                    type: "object",
+                    properties: {
+                        _id: {
+                            type: "string",
+                            description: "User unique identifier",
+                            example: "507f1f77bcf86cd799439011"
+                        },
+                        username: {
+                            type: "string",
+                            description: "Unique username",
+                            example: "johndoe"
+                        },
+                        email: {
+                            type: "string",
+                            format: "email",
+                            description: "User email address",
+                            example: "john@example.com"
+                        }
+                    }
+                },
+                UserInput: {
+                    type: "object",
+                    properties: {
+                        username: {
+                            type: "string",
+                            description: "Unique username",
+                            example: "janedoe"
+                        },
+                        email: {
+                            type: "string",
+                            format: "email",
+                            description: "User email address",
+                            example: "jane@example.com"
+                        },
+                        password: {
+                            type: "string",
+                            description: "User password",
+                            example: "securePassword456"
+                        }
+                    },
+                    required: ["username", "email", "password"]
+                },
+                SuccessMessage: {
+                    type: "object",
+                    properties: {
+                        message: {
+                            type: "string",
+                            description: "Success message",
+                            example: "Deleted successfully"
+                        }
+                    }
+                },
                 Post: {
                     type: "object",
                     properties: {

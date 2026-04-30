@@ -81,7 +81,7 @@ export const smartSearch = async (req: Request, res: Response): Promise<void> =>
                     break;
                 } catch (err) {
                     lastError = err;
-                    if (attempt < 2) await new Promise((r) => setTimeout(r, 2000));
+                    if (attempt < 2) await new Promise((r) => setTimeout(r, 10000));
                 }
             }
             if (!answer) throw lastError;

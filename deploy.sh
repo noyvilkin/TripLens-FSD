@@ -37,7 +37,7 @@ fi
 
 # Step 1: Pull latest changes
 echo "Step 1: Pulling latest changes from repository..."
-if git pull origin main; then
+if git pull origin retry-logic; then
     print_success "Git pull completed"
 else
     print_error "Git pull failed"

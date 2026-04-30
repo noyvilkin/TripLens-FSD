@@ -7,7 +7,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
-  timeout: 8000,
+  timeout: 20000,
   headers: {
     Accept: 'application/json',
   },
@@ -16,7 +16,7 @@ const api = axios.create({
 const rawApi = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
-  timeout: 8000,
+  timeout: 20000,
   headers: {
     Accept: 'application/json',
   },

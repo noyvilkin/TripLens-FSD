@@ -72,9 +72,19 @@ export const smartSearch = async (req: Request, res: Response): Promise<void> =>
                 `Photos: ${(trip.images?.length ?? 0)} image(s)`
         );
 
-        let answer: string;
+        let answer = "";
         try {
-            answer = await generateRAGAnswer(query.trim(), tripContexts);
+            let lastError: unknown;
+            for (let attempt = 0; attempt < 3; attempt++) {
+                try {
+                    answer = await generateRAGAnswer(query.trim(), tripContexts);
+                    break;
+                } catch (err) {
+                    lastError = err;
+                    if (attempt < 2) await new Promise((r) => setTimeout(r, 2000));
+                }
+            }
+            if (!answer) throw lastError;
         } catch (ragError) {
             console.warn("RAG generation failed; returning fallback answer:", ragError);
             answer = buildFallbackAnswer(query.trim(), sources);
